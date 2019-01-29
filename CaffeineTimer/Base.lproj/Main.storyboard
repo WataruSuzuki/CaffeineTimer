@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="14460.20"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--Delegate-->
+        <scene sceneID="tne-QT-ifu">
+            <objects>
+                <viewController storyboardIdentifier="CAFTopViewController" useStoryboardIdentifierAsRestorationIdentifier="YES" id="BYZ-38-t0r" customClass="MyTopViewController" customModule="CaffeineTimer" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="y3c-jy-aDJ"/>
+                        <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="jen-Y4-den" userLabel="DummyView">
+                                <rect key="frame" x="0.0" y="20" width="0.0" height="647"/>
+                                <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" id="Uxl-T2-noV"/>
+                                </constraints>
+                            </view>
+                            <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="8jA-QS-jdq" customClass="LMGaugeView">
+                                <rect key="frame" x="0.0" y="20" width="375" height="375.5"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" secondItem="8jA-QS-jdq" secondAttribute="height" multiplier="1:1" id="5VR-Le-pLV"/>
+                                </constraints>
+                                <userDefinedRuntimeAttributes>
+                                    <userDefinedRuntimeAttribute type="number" keyPath="limitValue">
+                                        <integer key="value" value="0"/>
+                                    </userDefinedRuntimeAttribute>
+                                    <userDefinedRuntimeAttribute type="number" keyPath="maxValue">
+                                        <integer key="value" value="400"/>
+                                    </userDefinedRuntimeAttribute>
+                                </userDefinedRuntimeAttributes>
+                                <connections>
+                                    <outlet property="delegate" destination="BYZ-38-t0r" id="ioC-Pl-YJA"/>
+                                </connections>
+                            </view>
+                            <segmentedControl opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="top" segmentControlStyle="plain" selectedSegmentIndex="0" translatesAutoresizingMaskIntoConstraints="NO" id="OZO-KN-Rbl">
+                                <rect key="frame" x="20" y="403.5" width="335" height="29"/>
+                                <segments>
+                                    <segment title="Your caffeine"/>
+                                    <segment title="Time left"/>
+                                </segments>
+                                <connections>
+                                    <action selector="changeSegmentGauge:" destination="BYZ-38-t0r" eventType="valueChanged" id="nL1-Yr-1XY"/>
+                                </connections>
+                            </segmentedControl>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="IbN-yP-qKx" customClass="MDButton">
+                                <rect key="frame" x="106.5" y="439.5" width="162" height="162"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" secondItem="IbN-yP-qKx" secondAttribute="height" multiplier="81:43" id="eBx-Px-PuZ"/>
+                                    <constraint firstAttribute="width" secondItem="IbN-yP-qKx" secondAttribute="height" multiplier="1:1" id="qLk-RC-7Jo"/>
+                                </constraints>
+                                <state key="normal" image="CoffeeButton"/>
+                                <userDefinedRuntimeAttributes>
+                                    <userDefinedRuntimeAttribute type="number" keyPath="type">
+                                        <integer key="value" value="2"/>
+                                    </userDefinedRuntimeAttribute>
+                                </userDefinedRuntimeAttributes>
+                                <variation key="default">
+                                    <mask key="constraints">
+                                        <exclude reference="eBx-Px-PuZ"/>
+                                    </mask>
+                                </variation>
+                                <connections>
+                                    <action selector="tapCoffeeButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="5Wz-3p-Stl"/>
+                                </connections>
+                            </button>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="00:00:00" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="3" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="f3N-SM-qba">
+                                <rect key="frame" x="0.0" y="20" width="375" height="375.5"/>
+                                <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" secondItem="f3N-SM-qba" secondAttribute="height" multiplier="1:1" id="85T-SP-nfL"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="70"/>
+                                <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                                <variation key="default">
+                                    <mask key="constraints">
+                                        <exclude reference="85T-SP-nfL"/>
+                                    </mask>
+                                </variation>
+                            </label>
+                        </subviews>
+                        <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="f3N-SM-qba" firstAttribute="width" secondItem="8jA-QS-jdq" secondAttribute="width" id="4vz-aq-2lx"/>
+                            <constraint firstItem="OZO-KN-Rbl" firstAttribute="leading" secondItem="jen-Y4-den" secondAttribute="trailing" constant="20" id="7ha-MX-Zi1"/>
+                            <constraint firstItem="8jA-QS-jdq" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" id="DD9-sa-G06"/>
+                            <constraint firstItem="8jA-QS-jdq" firstAttribute="height" secondItem="jen-Y4-den" secondAttribute="height" multiplier="0.58" id="JbJ-RX-Krt"/>
+                            <constraint firstItem="jen-Y4-den" firstAttribute="top" secondItem="8bC-Xf-vdC" secondAttribute="top" constant="20" id="Par-1W-KNB"/>
+                            <constraint firstItem="f3N-SM-qba" firstAttribute="top" secondItem="8jA-QS-jdq" secondAttribute="top" id="SH3-bp-mS9"/>
+                            <constraint firstItem="OZO-KN-Rbl" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="UWQ-hl-LpA"/>
+                            <constraint firstItem="OZO-KN-Rbl" firstAttribute="top" secondItem="8jA-QS-jdq" secondAttribute="bottom" constant="8" id="Yp1-8B-Tbf"/>
+                            <constraint firstItem="IbN-yP-qKx" firstAttribute="top" secondItem="OZO-KN-Rbl" secondAttribute="bottom" constant="8" id="Z5h-af-Crm"/>
+                            <constraint firstAttribute="bottom" secondItem="jen-Y4-den" secondAttribute="bottom" id="aSR-RF-6Fv"/>
+                            <constraint firstItem="f3N-SM-qba" firstAttribute="height" secondItem="8jA-QS-jdq" secondAttribute="height" id="cCs-fd-jxq"/>
+                            <constraint firstAttribute="trailing" secondItem="OZO-KN-Rbl" secondAttribute="trailing" constant="20" id="iC1-e4-i16"/>
+                            <constraint firstItem="f3N-SM-qba" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="ikW-7D-Cvz"/>
+                            <constraint firstItem="8jA-QS-jdq" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="nUG-eU-Ifl"/>
+                            <constraint firstItem="jen-Y4-den" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="s1r-Km-PhY"/>
+                            <constraint firstItem="IbN-yP-qKx" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="yKm-Vd-dsc"/>
+                        </constraints>
+                    </view>
+                    <connections>
+                        <outlet property="buttonAddCaffeine" destination="IbN-yP-qKx" id="tej-Lk-Uts"/>
+                        <outlet property="caffeineGaugeView" destination="8jA-QS-jdq" id="lTK-Fb-vad"/>
+                        <outlet property="labelTimeLeft" destination="f3N-SM-qba" id="7q9-aW-9kW"/>
+                        <outlet property="segmentedControlForGauge" destination="OZO-KN-Rbl" id="MIb-YS-kd0"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="305" y="356"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="CoffeeButton" width="162" height="162"/>
+    </resources>
+</document>

@@ -1,0 +1,17 @@
+/*
+ Localizable.strings
+ CaffeineTimer
+ 
+ Created by WataruSuzuki on 2016/01/20.
+ Copyright © 2016年 WataruSuzuki. All rights reserved.
+ */
+error = "エラー";
+caffeine_unit_mg = "カフェイン残量(mg)";//milligram
+
+please_try_again = "しばらく待ってから試してください";
+your_caffeine = "カフェイン残量";
+time_left = "残り時間";
+processing_caffeine = "カフェインデータを更新中です。しばらくお待ちください";
+digestion_caffeine = "カフェインが消化されました";
+tutorial_msg = "ボタンをタップするとカフェインタイマーが始まります。ヘルスにもデータが登録されます。";
+

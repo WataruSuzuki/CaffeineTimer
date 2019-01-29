@@ -1,0 +1,17 @@
+/*
+ Localizable.strings
+ CaffeineTimer
+ 
+ Created by WataruSuzuki on 2016/01/20.
+ Copyright © 2016年 WataruSuzuki. All rights reserved.
+ */
+error = "Error";
+caffeine_unit_mg = "Caffeine(mg)";//milligram
+
+please_try_again = "Please try again...";
+your_caffeine = "Your Caffeine";
+time_left = "Time left";
+processing_caffeine = "Processing now caffiene data. Please wait...";
+digestion_caffeine = "Your caffeine is digested.";
+tutorial_msg = "Tap button after drinked caffeine bevalage. It's start Caffeine Timer. And it's also register data to Health app";
+

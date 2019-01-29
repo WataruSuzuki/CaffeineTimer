@@ -1,0 +1,11 @@
+/* 
+  InfoPlist.strings
+  CaffeineTimer
+
+  Created by 鈴木 航 on 2016/02/27.
+  Copyright © 2016年 WataruSuzuki. All rights reserved.
+*/
+CFBundleDisplayName = "カフェインタイマー";
+
+caffeine_timer = "カフェインタイマー";
+set_the_timer = "新しいタイマーをセットする";
