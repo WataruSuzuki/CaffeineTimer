@@ -1,0 +1,6 @@
+framework module Pods_CaffeineTimerTests {
+  umbrella header "Pods-CaffeineTimerTests-umbrella.h"
+
+  export *
+  module * { export * }
+}

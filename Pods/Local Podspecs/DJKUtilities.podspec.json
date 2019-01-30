@@ -1,0 +1,23 @@
+{
+  "name": "DJKUtilities",
+  "version": "0.1.5",
+  "summary": "A short description of DJKUtilities.",
+  "description": "A longer description of DJKUtilities in Markdown format.\n\n* Think: Why did you write this? What is the focus? What does it do?\n* CocoaPods will be using this to generate tags, and improve search results.\n* Try to keep it short, snappy and to the point.\n* Finally, don't worry about the indent, CocoaPods strips it!",
+  "homepage": "https://github.com/WataruSuzuki",
+  "license": "MIT License",
+  "authors": {
+    "WataruSuzuki": "wataru0406@gmail.com"
+  },
+  "platforms": {
+    "ios": "7.0"
+  },
+  "source": {
+    "git": "https://github.com/WataruSuzuki/DJKUtilities.git",
+    "tag": "0.1.5"
+  },
+  "source_files": [
+    "Locale/*.{h,m}",
+    "SysInfo/*.{h,m}",
+    "ViewUtils/*.{h,m}"
+  ]
+}

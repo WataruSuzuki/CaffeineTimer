@@ -1,0 +1,6 @@
+framework module DJKUtilAdMob {
+  umbrella header "DJKUtilAdMob-umbrella.h"
+
+  export *
+  module * { export * }
+}
