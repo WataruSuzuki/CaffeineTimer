@@ -24,10 +24,9 @@ class MyTopViewController: DJKAdMobBaseViewController,
     @IBOutlet weak var segmentedControlForGauge: UISegmentedControl!
     @IBOutlet weak var labelTimeLeft: UILabel!
     
-    //var tutorialPopLabel: MMPopLabel!
-    
     let myGaugeTimerUtilities = GaugeTimerUtilities.sharedInstance
     //let myHealthKitUtils = HealthKitUtils.sharedInstance
+    var shownTutorial = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -102,7 +101,10 @@ class MyTopViewController: DJKAdMobBaseViewController,
         highlightController.bodyColor = UIColor.white
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.present(highlightController, animated: true, completion: nil)
+            if !self.shownTutorial {
+                self.present(highlightController, animated: true, completion: nil)
+                self.shownTutorial = true
+            }
         }
     }
     
