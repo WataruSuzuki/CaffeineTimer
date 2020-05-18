@@ -29,7 +29,7 @@ class AppDelegate: UIResponder,
     }
     static let applicationShortcutUserInfoIconKey = "applicationShortcutUserInfoIconKey"
     
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey : Any]? = nil) -> Bool {
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         if #available(iOS 10.0, *) {
             UNUserNotificationCenter.current().delegate = self
             UNUserNotificationCenter.current().removeAllDeliveredNotifications()
@@ -42,7 +42,7 @@ class AppDelegate: UIResponder,
             if #available(iOS 10.0, *) {
                 //do nothing
             } else {
-                if let localNotification = launchOptions?[UIApplicationLaunchOptionsKey.localNotification] as? UILocalNotification {
+                if let localNotification = launchOptions?[UIApplication.LaunchOptionsKey.localNotification] as? UILocalNotification {
                     if NSLocalizedString("digestion_caffeine", comment: "") == localNotification.alertBody {
                         //TODO
                     }
@@ -106,14 +106,13 @@ class AppDelegate: UIResponder,
         }
     }
     
-    @available(iOS 9.0, *)
-    func shouldPerformAdditionalDelegateHandling(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
+    func shouldPerformAdditionalDelegateHandling(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
         // Override point for customization after application launch.
         let shouldPerformAdditionalDelegateHandling: Bool
         
         // If a shortcut was launched, display its information and take the appropriate action
-        if let shortcutItem = launchOptions?[UIApplicationLaunchOptionsKey.shortcutItem] as? UIApplicationShortcutItem {
+        if let shortcutItem = launchOptions?[UIApplication.LaunchOptionsKey.shortcutItem] as? UIApplicationShortcutItem {
             
             launchedShortcutItem = shortcutItem
             
@@ -143,7 +142,6 @@ class AppDelegate: UIResponder,
         return shouldPerformAdditionalDelegateHandling
     }
 
-    @available(iOS 9.0, *)
     func handleShortCutItem(_ shortcutItem: UIApplicationShortcutItem) -> Bool {
         
         // Verify that the provided `shortcutItem`'s `type` is one handled by the application.

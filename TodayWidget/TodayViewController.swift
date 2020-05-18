@@ -73,10 +73,10 @@ class TodayViewController: UIViewController,
         if GaugeTimerUtilities.GaugeDispType.caffeine.rawValue == segmentedControlForGauge.selectedSegmentIndex {
             if #available(iOS 10.0, *) {
                 let attrUnitText = NSMutableAttributedString(string: " mg")
-                attrUnitText.addAttributes([NSAttributedStringKey.font: UIFont.boldSystemFont(ofSize: 27)], range: NSMakeRange(0, attrUnitText.length))
+                attrUnitText.addAttributes([NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 27)], range: NSMakeRange(0, attrUnitText.length))
 
                 let valueAttrText = NSMutableAttributedString(string: String(Int(myGaugeTimerUtilities.velocity)))
-                valueAttrText.addAttributes([NSAttributedStringKey.font: UIFont.boldSystemFont(ofSize: self.labelRemainValue.font.pointSize)], range: NSMakeRange(0, valueAttrText.length))
+                valueAttrText.addAttributes([NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: self.labelRemainValue.font.pointSize)], range: NSMakeRange(0, valueAttrText.length))
                 
                 valueAttrText.append(attrUnitText)
                 self.labelRemainValue.attributedText = valueAttrText

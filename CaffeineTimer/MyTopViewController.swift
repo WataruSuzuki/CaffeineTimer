@@ -39,8 +39,8 @@ class MyTopViewController: DJKAdMobBaseViewController,
         myGaugeTimerUtilities.startCountTimerCaffeineGauge()
         myGaugeTimerUtilities.loadRemainGauge()
         
-        NotificationCenter.default.addObserver(self, selector: #selector(MyTopViewController.appWillEnterForeground(_:)), name: NSNotification.Name.UIApplicationWillEnterForeground, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(MyTopViewController.appDidBecomeActive(_:)), name: NSNotification.Name.UIApplicationDidBecomeActive, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(MyTopViewController.appWillEnterForeground(_:)), name: UIApplication.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(MyTopViewController.appDidBecomeActive(_:)), name: UIApplication.didBecomeActiveNotification, object: nil)
     }
     
     override func viewWillLayoutSubviews() {
