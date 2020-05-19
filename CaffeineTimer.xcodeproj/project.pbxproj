@@ -70,6 +70,7 @@
 		96C92C121D281713002B79C5 /* MDSuggestPopupView.m in Sources */ = {isa = PBXBuildFile; fileRef = 96C92BE71D281712002B79C5 /* MDSuggestPopupView.m */; };
 		96C92C131D281713002B79C5 /* MDSuggestTableView.m in Sources */ = {isa = PBXBuildFile; fileRef = 96C92BE91D281712002B79C5 /* MDSuggestTableView.m */; };
 		96C92C141D281713002B79C5 /* UIView+MDExtension.m in Sources */ = {isa = PBXBuildFile; fileRef = 96C92BEB1D281712002B79C5 /* UIView+MDExtension.m */; };
+		CCF0F4472540075600349737 /* ServiceKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF0F4462540075600349737 /* ServiceKeys.swift */; };
 		F066B79F1C4C7BC20063AFB2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F066B79E1C4C7BC20063AFB2 /* AppDelegate.swift */; };
 		F066B7A11C4C7BC20063AFB2 /* MyTopViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F066B7A01C4C7BC20063AFB2 /* MyTopViewController.swift */; };
 		F066B7A41C4C7BC20063AFB2 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F066B7A21C4C7BC20063AFB2 /* Main.storyboard */; };
@@ -271,6 +272,7 @@
 		96C92BEB1D281712002B79C5 /* UIView+MDExtension.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIView+MDExtension.m"; sourceTree = "<group>"; };
 		AE25DF74C373266AE439C421 /* Pods_CaffeineTimerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_CaffeineTimerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BCAD12D1017EA9DB62B49804 /* Pods-CaffeineTimer.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CaffeineTimer.release.xcconfig"; path = "Pods/Target Support Files/Pods-CaffeineTimer/Pods-CaffeineTimer.release.xcconfig"; sourceTree = "<group>"; };
+		CCF0F4462540075600349737 /* ServiceKeys.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ServiceKeys.swift; sourceTree = "<group>"; };
 		F066B79B1C4C7BC20063AFB2 /* CaffeineTimer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CaffeineTimer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F066B79E1C4C7BC20063AFB2 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		F066B7A01C4C7BC20063AFB2 /* MyTopViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyTopViewController.swift; sourceTree = "<group>"; };
@@ -547,6 +549,7 @@
 		F066B79D1C4C7BC20063AFB2 /* CaffeineTimer */ = {
 			isa = PBXGroup;
 			children = (
+				CCF0F4462540075600349737 /* ServiceKeys.swift */,
 				96C92B931D281712002B79C5 /* Material-Controls-For-iOSUILib */,
 				961767CD1C81FD0600AEB4D0 /* Settings.bundle */,
 				602018491C4CB53200FC56BF /* CaffeineTimer.entitlements */,
@@ -1039,6 +1042,7 @@
 				96C92C011D281713002B79C5 /* MDRippleLayer.m in Sources */,
 				96C92BFA1D281713002B79C5 /* NSDateHelper.m in Sources */,
 				96C92C141D281713002B79C5 /* UIView+MDExtension.m in Sources */,
+				CCF0F4472540075600349737 /* ServiceKeys.swift in Sources */,
 				96C92BF61D281713002B79C5 /* NSCalendarHelper.m in Sources */,
 				F066B79F1C4C7BC20063AFB2 /* AppDelegate.swift in Sources */,
 				96C92C031D281713002B79C5 /* MDSnackbar.m in Sources */,

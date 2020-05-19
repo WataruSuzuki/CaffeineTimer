@@ -6,6 +6,7 @@
   Copyright © 2016年 WataruSuzuki. All rights reserved.
 */
 CFBundleDisplayName = "Caffeine Timer";
+NSUserTrackingUsageDescription = "This identifier will be used to deliver personalized ads to you.";
 
 caffeine_timer = "Caffeine Timer";
 set_the_timer = "Set new timer";

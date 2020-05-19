@@ -56,7 +56,15 @@ class MyTopViewController: HelpingMonetizeViewController,
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        refreshAllAd()
+        PurchaseService.shared.confirmConsent(
+            publisherIds: [ServiceKeys.ADMOB_PUB_ID],
+            //productId: ServiceKeys.UNLOCK_AD,
+            privacyPolicyUrl: AppDelegate.privacyPolicyUrl, completion: { (confirmed) in
+                if confirmed {
+                    self.refreshAllAd()
+                }
+            }
+        )
     }
     
     override func viewDidAppear(_ animated: Bool) {

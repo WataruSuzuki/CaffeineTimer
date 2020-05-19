@@ -15,7 +15,7 @@ class AppDelegate: UIResponder,
     UNUserNotificationCenterDelegate,
     UIApplicationDelegate
 {
-
+    static let privacyPolicyUrl = "https://watarusuzuki.github.io/CaffeineTimer/PRIVACY_POLICY.html"
     var window: UIWindow?
     
     private var _launchedShortcutItem: AnyObject?
@@ -31,7 +31,6 @@ class AppDelegate: UIResponder,
     static let applicationShortcutUserInfoIconKey = "applicationShortcutUserInfoIconKey"
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        PurchaseService.shared
         if #available(iOS 10.0, *) {
             UNUserNotificationCenter.current().delegate = self
             UNUserNotificationCenter.current().removeAllDeliveredNotifications()

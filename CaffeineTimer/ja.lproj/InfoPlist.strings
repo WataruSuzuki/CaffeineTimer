@@ -6,6 +6,7 @@
   Copyright © 2016年 WataruSuzuki. All rights reserved.
 */
 CFBundleDisplayName = "カフェインタイマー";
+NSUserTrackingUsageDescription = "最適化された広告を配信するために使用します。";
 
 caffeine_timer = "カフェインタイマー";
 set_the_timer = "新しいタイマーをセットする";
