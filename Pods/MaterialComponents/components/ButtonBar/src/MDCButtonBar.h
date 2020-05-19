@@ -53,6 +53,9 @@ typedef NS_OPTIONS(NSUInteger, MDCButtonBarLayoutPosition) {
  */
 IB_DESIGNABLE
 @interface MDCButtonBar : UIView
+#ifdef __IPHONE_13_4
+                          <UIPointerInteractionDelegate>
+#endif
 
 #pragma mark Delegating
 
@@ -97,6 +100,17 @@ IB_DESIGNABLE
  - (void)didTap:(UIBarButtonItem *)item event:(UIEvent *)event button:(UIButton *)button;
  */
 @property(nonatomic, copy, nullable) NSArray<UIBarButtonItem *> *items;
+
+/**
+ Returns the rect of the item's view within the given @c coordinateSpace.
+
+ If the provided item is not contained in @c items, then the behavior is undefined.
+
+ @param item The item within @c items whose rect should be computed.
+ @param coordinateSpace The coordinate space the returned rect should be in relation to.
+ */
+- (CGRect)rectForItem:(nonnull UIBarButtonItem *)item
+    inCoordinateSpace:(nonnull id<UICoordinateSpace>)coordinateSpace;
 
 /**
  If greater than zero, will ensure that any UIButton with a title is aligned to the provided
@@ -164,17 +178,50 @@ IB_DESIGNABLE
 @property(nonatomic) MDCButtonBarLayoutPosition layoutPosition;
 
 /**
- The inkColor that is used for all buttons in the button bar.
+ The rippleColor that is used for all buttons in the button bar.
 
- If set to nil, button bar buttons use default ink color.
+ If set to nil, button bar buttons use default ripple color.
  */
-@property(nonatomic, strong, nullable) UIColor *inkColor;
+@property(nonatomic, strong, nullable) UIColor *rippleColor;
+
+/**
+ By setting this property to @c YES, the Ripple component will be used instead of Ink
+ to display visual feedback to the user.
+
+ @note This property will eventually be enabled by default, deprecated, and then deleted as part
+ of our migration to Ripple. Learn more at
+ https://github.com/material-components/material-components-ios/tree/develop/components/Ink#migration-guide-ink-to-ripple
+
+ Defaults to NO.
+ */
+@property(nonatomic, assign) BOOL enableRippleBehavior;
 
 /**
  Returns a height adhering to the Material spec for Bars and a width that is able to accommodate
  every item present in the `items` property. The provided size is ignored.
  */
 - (CGSize)sizeThatFits:(CGSize)size;
+
+/**
+ A block that is invoked when the @c MDCButtonBar receives a call to @c
+ traitCollectionDidChange:. The block is called after the call to the superclass.
+ */
+@property(nonatomic, copy, nullable) void (^traitCollectionDidChangeBlock)
+    (MDCButtonBar *_Nonnull buttonBar, UITraitCollection *_Nullable previousTraitCollection);
+
+@end
+
+@interface MDCButtonBar (ToBeDeprecated)
+
+/**
+ The inkColor that is used for all buttons in the button bar.
+
+ If set to nil, button bar buttons use default ink color.
+ @warning This method will eventually be deprecated. Opt-in to Ripple by setting
+ enableRippleBehavior to YES, and then use rippleColor instead. Learn more at
+ https://github.com/material-components/material-components-ios/tree/develop/components/Ink#migration-guide-ink-to-ripple
+ */
+@property(nonatomic, strong, nullable) UIColor *inkColor;
 
 @end
 
@@ -187,38 +234,3 @@ typedef NS_OPTIONS(NSUInteger, MDCBarButtonItemLayoutHints) {
   /** Whether or not this bar button item is the last button in the list. */
   MDCBarButtonItemLayoutHintsIsLastButton = 1 << 1,
 };
-
-/**
- The MDCButtonBarDelegate protocol defines the means by which MDCButtonBar can request that a
- view be created for a bar button item.
-
- An object that conforms to this protocol must forward UIControlEventTouchUpInside events to the
- button bar's didTapButton:event: method signature in order to pass the correct UIBarButtonItem
- argument to the item's target/action invocation. This method signature is made available by
- importing the MDCAppBarButtonBarBuilder.h header. The MDCAppBarButtonBarBuilder.h header should
- *only* be
- imported in files that implement objects conforming to MDCButtonBarDelegate.
-
- @seealso MDCBarButtonItemLayoutHints
- */
-@protocol MDCButtonBarDelegate <NSObject>
-@optional
-
-/**
- Informs the receiver that the button bar requires a layout pass.
-
- The receiver is expected to call propagate this setNeedsLayout call to the view responsible for
- setting the frame of the button bar so that the button bar can expand or contract as necessary.
-
- This method is typically called as a result of a UIBarButtonItem property changing or as a result
- of the items property being changed.
- */
-- (void)buttonBarDidInvalidateIntrinsicContentSize:(nonnull MDCButtonBar *)buttonBar;
-
-/** Asks the receiver to return a view that represents the given bar button item. */
-- (nonnull UIView *)buttonBar:(nonnull MDCButtonBar *)buttonBar
-                  viewForItem:(nonnull UIBarButtonItem *)barButtonItem
-                  layoutHints:(MDCBarButtonItemLayoutHints)layoutHints
-    __deprecated_msg("There will be no replacement for this API.");
-
-@end

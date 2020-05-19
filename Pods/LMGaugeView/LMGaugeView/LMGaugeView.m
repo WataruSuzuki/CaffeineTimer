@@ -90,11 +90,12 @@
     _value = kDefaultMinValue;
     _minValue = kDefaultMinValue;
     _maxValue = kDefaultMaxValue;
-    _limitValue = kDefaultLimitValue;
+    _limitValues = @[@(kDefaultLimitValue)];
     _numOfDivisions = kDefaultNumOfDivisions;
     _numOfSubDivisions = kDefaultNumOfSubDivisions;
     
     // Ring
+    _showRingBackground = YES;
     _ringThickness = kDefaultRingThickness;
     _ringBackgroundColor = kDefaultRingBackgroundColor;
     
@@ -110,7 +111,7 @@
     // Limit dot
     _showLimitDot = YES;
     _limitDotRadius = kDefaultLimitDotRadius;
-    _limitDotColor = kDefaultLimitDotColor;
+    _limitDotColors = @[kDefaultLimitDotColor];
     
     // Value Text
     _valueFont = kDefaultValueFont;
@@ -165,11 +166,13 @@
     /*!
      *  Draw the ring background
      */
-    CGContextSetLineWidth(context, self.ringThickness);
-    CGContextBeginPath(context);
-    CGContextAddArc(context, center.x, center.y, ringRadius, 0, M_PI * 2, 0);
-    CGContextSetStrokeColorWithColor(context, [self.ringBackgroundColor colorWithAlphaComponent:0.3].CGColor);
-    CGContextStrokePath(context);
+    if (self.showRingBackground) {
+        CGContextSetLineWidth(context, self.ringThickness);
+        CGContextBeginPath(context);
+        CGContextAddArc(context, center.x, center.y, ringRadius, 0, M_PI * 2, 0);
+        CGContextSetStrokeColorWithColor(context, [self.ringBackgroundColor colorWithAlphaComponent:0.3].CGColor);
+        CGContextStrokePath(context);
+    }
     
     /*!
      *  Draw the ring progress background
@@ -215,12 +218,19 @@
      */
     if (self.showLimitDot && self.numOfDivisions != 0)
     {
-        CGFloat angle = [self angleFromValue:self.limitValue];
-        CGPoint dotCenter = CGPointMake(dotRadius * cos(angle) + center.x, dotRadius * sin(angle) + center.y);
-        [self drawDotAtContext:context
-                        center:dotCenter
-                        radius:self.limitDotRadius
-                     fillColor:self.limitDotColor.CGColor];
+        for (int i = 0; i < self.limitValues.count; i++) {
+            NSNumber *limitValue = [self.limitValues objectAtIndex:i];
+            if (limitValue.doubleValue >= self.minValue && limitValue.doubleValue <= self.maxValue) {
+                CGFloat angle = [self angleFromValue:limitValue.doubleValue];
+                CGPoint dotCenter = CGPointMake(dotRadius * cos(angle) + center.x, dotRadius * sin(angle) + center.y);
+                UIColor *limitDotColor = i < self.limitDotColors.count ? self.limitDotColors[i] : kDefaultLimitDotColor;
+                
+                [self drawDotAtContext:context
+                                center:dotCenter
+                                radius:self.limitDotRadius
+                             fillColor:limitDotColor.CGColor];
+            }
+        }
     }
     
     /*!
@@ -257,10 +267,15 @@
         self.valueLabel = [[UILabel alloc] init];
         self.valueLabel.backgroundColor = [UIColor clearColor];
         self.valueLabel.textAlignment = NSTextAlignmentCenter;
-        self.valueLabel.text = [NSString stringWithFormat:@"%0.f", self.value];
+        if (self.decimalFormat) {
+            self.valueLabel.text = [NSString stringWithFormat:@"%.1f", self.value];
+        }
+        else {
+            self.valueLabel.text = [NSString stringWithFormat:@"%0.f", self.value];
+        }
         self.valueLabel.font = self.valueFont;
         self.valueLabel.adjustsFontSizeToFitWidth = YES;
-        self.valueLabel.minimumScaleFactor = 10/self.valueLabel.font.pointSize;
+        self.valueLabel.minimumScaleFactor = 0.5;
         self.valueLabel.textColor = self.valueTextColor;
         [self addSubview:self.valueLabel];
     }
@@ -281,7 +296,7 @@
     }
     self.minValueLabel.text = [NSString stringWithFormat:@"%0.f", self.minValue];
     self.minValueLabel.font = self.minMaxValueFont;
-    self.minValueLabel.minimumScaleFactor = 10/self.minValueLabel.font.pointSize;
+    self.minValueLabel.minimumScaleFactor = 0.5;
     self.minValueLabel.textColor = self.minMaxValueTextColor;
     self.minValueLabel.hidden = !self.showMinMaxValue;
     CGPoint minDotCenter = CGPointMake(dotRadius * cos(self.startAngle) + center.x, dotRadius * sin(self.startAngle) + center.y);
@@ -300,7 +315,7 @@
     }
     self.maxValueLabel.text = [NSString stringWithFormat:@"%0.f", self.maxValue];
     self.maxValueLabel.font = self.minMaxValueFont;
-    self.maxValueLabel.minimumScaleFactor = 10/self.maxValueLabel.font.pointSize;
+    self.maxValueLabel.minimumScaleFactor = 0.5;
     self.maxValueLabel.textColor = self.minMaxValueTextColor;
     self.maxValueLabel.hidden = !self.showMinMaxValue;
     CGPoint maxDotCenter = CGPointMake(dotRadius * cos(self.endAngle) + center.x, dotRadius * sin(self.endAngle) + center.y);
@@ -317,7 +332,7 @@
         self.unitOfMeasurementLabel.text = self.unitOfMeasurement;
         self.unitOfMeasurementLabel.font = self.unitOfMeasurementFont;
         self.unitOfMeasurementLabel.adjustsFontSizeToFitWidth = YES;
-        self.unitOfMeasurementLabel.minimumScaleFactor = 10/self.unitOfMeasurementLabel.font.pointSize;
+        self.unitOfMeasurementLabel.minimumScaleFactor = 0.5;
         self.unitOfMeasurementLabel.textColor = self.unitOfMeasurementTextColor;
         [self addSubview:self.unitOfMeasurementLabel];
         self.unitOfMeasurementLabel.hidden = !self.showUnitOfMeasurement;
@@ -360,7 +375,12 @@
     /*!
      *  Set text for value label
      */
-    self.valueLabel.text = [NSString stringWithFormat:@"%0.f", _value];
+    if (self.decimalFormat) {
+        self.valueLabel.text = [NSString stringWithFormat:@"%.1f", _value];
+    }
+    else {
+        self.valueLabel.text = [NSString stringWithFormat:@"%0.f", _value];
+    }
 
     /*!
      *  Trigger the stoke animation of ring layer.
@@ -386,10 +406,10 @@
     }
 }
 
-- (void)setLimitValue:(CGFloat)limitValue
+- (void)setLimitValues:(NSArray *)limitValues
 {
-    if (_limitValue != limitValue && limitValue >= _minValue && limitValue <= _maxValue) {
-        _limitValue = limitValue;
+    if (_limitValues != limitValues) {
+        _limitValues = limitValues;
         
         [self setNeedsDisplay];
     }
@@ -494,10 +514,10 @@
     }
 }
 
-- (void)setLimitDotColor:(UIColor *)limitDotColor
+- (void)setLimitDotColors:(NSArray *)limitDotColors
 {
-    if (_limitDotColor != limitDotColor) {
-        _limitDotColor = limitDotColor;
+    if (_limitDotColors != limitDotColors) {
+        _limitDotColors = limitDotColors;
         
         [self setNeedsDisplay];
     }
@@ -509,7 +529,6 @@
         _valueFont = valueFont;
         
         self.valueLabel.font = _valueFont;
-        self.valueLabel.minimumScaleFactor = 10/_valueFont.pointSize;
     }
 }
 
@@ -573,7 +592,6 @@
         _unitOfMeasurementFont = unitOfMeasurementFont;
         
         self.unitOfMeasurementLabel.font = _unitOfMeasurementFont;
-        self.unitOfMeasurementLabel.minimumScaleFactor = 10/_unitOfMeasurementFont.pointSize;
     }
 }
 

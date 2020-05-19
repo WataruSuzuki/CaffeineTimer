@@ -16,17 +16,18 @@
 
 #import "MDCAppBarContainerViewController.h"
 
-#import <MDFInternationalization/MDFInternationalization.h>
-#import <MDFTextAccessibility/MDFTextAccessibility.h>
-#import "MaterialApplication.h"
+#import "private/MaterialAppBarStrings.h"
+#import "private/MaterialAppBarStrings_table.h"
+#import "MDCAppBarViewControllerAccessibilityPerformEscapeDelegate.h"
 #import "MaterialFlexibleHeader.h"
-#import "MaterialIcons+ic_arrow_back.h"
 #import "MaterialShadowElevations.h"
 #import "MaterialShadowLayer.h"
 #import "MaterialTypography.h"
+#import "MaterialApplication.h"
+#import "MaterialIcons+ic_arrow_back.h"
 #import "MaterialUIMetrics.h"
-#import "private/MaterialAppBarStrings.h"
-#import "private/MaterialAppBarStrings_table.h"
+#import <MDFInternationalization/MDFInternationalization.h>
+#import <MDFTextAccessibility/MDFTextAccessibility.h>
 
 static NSString *const kBarStackKey = @"barStack";
 
@@ -56,9 +57,11 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
 
 - (void)MDCAppBarViewController_commonInit {
   // Shadow layer
+  __weak MDCAppBarViewController *weakSelf = self;
   MDCFlexibleHeaderShadowIntensityChangeBlock intensityBlock =
       ^(CALayer *_Nonnull shadowLayer, CGFloat intensity) {
         CGFloat elevation = MDCShadowElevationAppBar * intensity;
+        weakSelf.headerView.elevation = elevation;
         [(MDCShadowLayer *)shadowLayer setElevation:elevation];
       };
   [self.headerView setShadowLayer:[MDCShadowLayer layer] intensityDidChangeBlock:intensityBlock];
@@ -69,6 +72,8 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
   self.headerStackView.translatesAutoresizingMaskIntoConstraints = NO;
   self.headerStackView.topBar = self.navigationBar;
 }
+
+#pragma mark - Properties
 
 - (MDCHeaderStackView *)headerStackView {
   // Removed call to loadView here as we should never be calling it manually.
@@ -145,6 +150,31 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
   return backBarButtonItem;
 }
 
+- (void)setShouldAdjustHeightBasedOnHeaderStackView:(BOOL)shouldAdjustHeightBasedOnHeaderStackView {
+  _shouldAdjustHeightBasedOnHeaderStackView = shouldAdjustHeightBasedOnHeaderStackView;
+  if (shouldAdjustHeightBasedOnHeaderStackView) {
+    self.headerView.minMaxHeightIncludesSafeArea = NO;
+    [self adjustHeightBasedOnHeaderStackView];
+  }
+}
+
+- (void)setInferTopSafeAreaInsetFromViewController:(BOOL)inferTopSafeAreaInsetFromViewController {
+  [super setInferTopSafeAreaInsetFromViewController:inferTopSafeAreaInsetFromViewController];
+
+  if (inferTopSafeAreaInsetFromViewController) {
+    self.topLayoutGuideAdjustmentEnabled = YES;
+  }
+
+  _verticalConstraint.active = !self.inferTopSafeAreaInsetFromViewController;
+  _topSafeAreaConstraint.active = self.inferTopSafeAreaInsetFromViewController;
+}
+
+- (void)setHeaderStackViewOffset:(CGFloat)headerStackViewOffset {
+  _headerStackViewOffset = headerStackViewOffset;
+  _verticalConstraint.constant = [self verticalContraintLength];
+  _topSafeAreaConstraint.constant = [self topSafeAreaContraintLength];
+}
+
 #pragma mark - Resource bundle
 
 + (NSBundle *)bundle {
@@ -166,6 +196,8 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
   return [resourcePath stringByAppendingPathComponent:bundleName];
 }
 
+#pragma mark - UIViewController Overrides
+
 - (void)viewDidLoad {
   [super viewDidLoad];
 
@@ -179,7 +211,7 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
                             views:@{kBarStackKey : self.headerStackView}];
   [self.view addConstraints:horizontalConstraints];
 
-  CGFloat topMargin = MDCDeviceTopSafeAreaInset();
+  CGFloat topMargin = [self verticalContraintLength];
   _verticalConstraint = [NSLayoutConstraint constraintWithItem:self.headerStackView
                                                      attribute:NSLayoutAttributeTop
                                                      relatedBy:NSLayoutRelationEqual
@@ -189,13 +221,14 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
                                                       constant:topMargin];
   _verticalConstraint.active = !self.inferTopSafeAreaInsetFromViewController;
 
-  _topSafeAreaConstraint = [NSLayoutConstraint constraintWithItem:self.headerView.topSafeAreaGuide
-                                                        attribute:NSLayoutAttributeBottom
-                                                        relatedBy:NSLayoutRelationEqual
-                                                           toItem:self.headerStackView
-                                                        attribute:NSLayoutAttributeTop
-                                                       multiplier:1
-                                                         constant:0];
+  _topSafeAreaConstraint =
+      [NSLayoutConstraint constraintWithItem:self.headerStackView
+                                   attribute:NSLayoutAttributeTop
+                                   relatedBy:NSLayoutRelationEqual
+                                      toItem:self.headerView.topSafeAreaGuide
+                                   attribute:NSLayoutAttributeBottom
+                                  multiplier:1
+                                    constant:[self topSafeAreaContraintLength]];
   _topSafeAreaConstraint.active = self.inferTopSafeAreaInsetFromViewController;
 
   [NSLayoutConstraint constraintWithItem:self.headerStackView
@@ -206,17 +239,6 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
                               multiplier:1
                                 constant:0]
       .active = YES;
-}
-
-- (void)setInferTopSafeAreaInsetFromViewController:(BOOL)inferTopSafeAreaInsetFromViewController {
-  [super setInferTopSafeAreaInsetFromViewController:inferTopSafeAreaInsetFromViewController];
-
-  if (inferTopSafeAreaInsetFromViewController) {
-    self.topLayoutGuideAdjustmentEnabled = YES;
-  }
-
-  _verticalConstraint.active = !self.inferTopSafeAreaInsetFromViewController;
-  _topSafeAreaConstraint.active = self.inferTopSafeAreaInsetFromViewController;
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -234,7 +256,11 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
   if (@available(iOS 11.0, *)) {
     // We only update the top inset on iOS 11 because previously we were not adjusting the header
     // height to make it smaller when the status bar is hidden.
-    _verticalConstraint.constant = MDCDeviceTopSafeAreaInset();
+    _verticalConstraint.constant = [self verticalContraintLength];
+  }
+
+  if (self.shouldAdjustHeightBasedOnHeaderStackView) {
+    [self adjustHeightBasedOnHeaderStackView];
   }
 }
 
@@ -248,7 +274,15 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
   self.view.frame = frame;
 }
 
+#pragma mark - UIAccessibility
+
 - (BOOL)accessibilityPerformEscape {
+  if (self.accessibilityPerformEscapeDelegate) {
+    return [self.accessibilityPerformEscapeDelegate
+        appBarViewControllerAccessibilityPerformEscape:self];
+  }
+
+  // Fall-back behavior.
   [self dismissSelf];
   return YES;
 }
@@ -266,6 +300,25 @@ static NSString *const kMaterialAppBarBundle = @"MaterialAppBar.bundle";
   } else {
     [pvc dismissViewControllerAnimated:YES completion:nil];
   }
+}
+
+#pragma mark - Private
+
+- (CGFloat)verticalContraintLength {
+  return MDCDeviceTopSafeAreaInset() + _headerStackViewOffset;
+}
+
+- (CGFloat)topSafeAreaContraintLength {
+  return _headerStackViewOffset;
+}
+
+- (void)adjustHeightBasedOnHeaderStackView {
+  CGFloat heightSum = 0;
+  heightSum += [self.headerStackView.topBar sizeThatFits:self.view.bounds.size].height;
+  heightSum += [self.headerStackView.bottomBar sizeThatFits:self.view.bounds.size].height;
+  heightSum += _headerStackViewOffset;
+  self.headerView.minimumHeight = heightSum;
+  self.headerView.maximumHeight = heightSum;
 }
 
 @end

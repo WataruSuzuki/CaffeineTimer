@@ -18,6 +18,7 @@
 #import <MDFInternationalization/MDFInternationalization.h>
 
 #import "MDCBottomNavigationItemBadge.h"
+#import "MaterialAvailability.h"
 #import "MaterialBottomNavigationStrings.h"
 #import "MaterialBottomNavigationStrings_table.h"
 #import "MaterialMath.h"
@@ -27,6 +28,9 @@
 static const CGFloat kMaxSizeDimension = 1000000;
 static const CGFloat MDCBottomNavigationItemViewInkOpacity = (CGFloat)0.150;
 static const CGFloat MDCBottomNavigationItemViewTitleFontSize = 12;
+
+/** The default value for @c numberOfLines for the title label. */
+static const NSInteger kDefaultTitleNumberOfLines = 1;
 
 // The fonts available on iOS differ from that used on Material.io.  When trying to approximate
 // the position on iOS, it seems like a horizontal inset of 10 points looks pretty close.
@@ -43,6 +47,10 @@ static const NSTimeInterval kMDCBottomNavigationItemViewTransitionDuration = 0.1
 static NSString *const kMaterialBottomNavigationBundle = @"MaterialBottomNavigation.bundle";
 static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
 
+// The amount to inset pointerEffectHoverRect.
+// These values were chosen to achieve visual parity with UITabBar's highlight effect.
+const CGSize MDCButtonNavigationItemViewPointerEffectHighlightRectInset = {-24, -12};
+
 @interface MDCBottomNavigationItemView ()
 
 @property(nonatomic, strong) MDCBottomNavigationItemBadge *badge;
@@ -58,7 +66,7 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
 - (instancetype)initWithFrame:(CGRect)frame {
   self = [super initWithFrame:frame];
   if (self) {
-#if defined(__IPHONE_10_0) && (__IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_10_0)
+#if MDC_AVAILABLE_SDK_IOS(10_0)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunguarded-availability"
 #pragma clang diagnostic ignored "-Wtautological-pointer-compare"
@@ -68,7 +76,7 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
 #pragma clang diagnostic pop
 #else
     _shouldPretendToBeATab = YES;
-#endif
+#endif  // MDC_AVAILABLE_SDK_IOS(10_0)
     _titleBelowIcon = YES;
     [self commonMDCBottomNavigationItemViewInit];
   }
@@ -111,6 +119,7 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
 
 - (void)commonMDCBottomNavigationItemViewInit {
   _truncatesTitle = YES;
+  _titleNumberOfLines = kDefaultTitleNumberOfLines;
   if (!_selectedItemTintColor) {
     _selectedItemTintColor = [UIColor blackColor];
   }
@@ -134,6 +143,7 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
     _label.isAccessibilityElement = NO;
     [self addSubview:_label];
   }
+  _label.numberOfLines = kDefaultTitleNumberOfLines;
 
   if (!_badge) {
     _badge = [[MDCBottomNavigationItemBadge alloc] initWithFrame:CGRectZero];
@@ -152,6 +162,11 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
     _inkView.usesLegacyInkRipple = NO;
     _inkView.clipsToBounds = NO;
     [self addSubview:_inkView];
+  }
+
+  if (!_rippleTouchController) {
+    _rippleTouchController = [[MDCRippleTouchController alloc] initWithView:self];
+    _rippleTouchController.rippleView.rippleStyle = MDCRippleStyleUnbounded;
   }
 
   if (!_button) {
@@ -218,6 +233,7 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
   self.inkView.maxRippleRadius =
       (CGFloat)(MDCHypot(CGRectGetHeight(self.bounds), CGRectGetWidth(self.bounds)) / 2);
   [self centerLayoutAnimated:NO];
+  [self invalidatePointerInteractions];
 }
 
 - (void)calculateVerticalLayoutInBounds:(CGRect)contentBounds
@@ -238,13 +254,17 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
   }
 
   // Determine the position of the label and icon
-  CGFloat centerY = CGRectGetMidY(contentBoundingRect);
   CGFloat centerX = CGRectGetMidX(contentBoundingRect);
-  CGPoint iconImageViewCenter =
-      CGPointMake(centerX, centerY - totalContentHeight / 2 + iconHeight / 2);
+  CGFloat iconImageViewCenterY =
+      MAX(CGRectGetMidY(contentBoundingRect) - totalContentHeight / 2 +
+              iconHeight / 2,                                  // Content centered
+          CGRectGetMinY(contentBoundingRect) + iconHeight / 2  // Pinned to top of bounding rect.
+      );
+  CGPoint iconImageViewCenter = CGPointMake(centerX, iconImageViewCenterY);
   // Ignore the horizontal titlePositionAdjustment in a vertical layout to match UITabBar behavior.
-  CGPoint labelCenter = CGPointMake(centerX, centerY + totalContentHeight / 2 - labelHeight / 2 +
-                                                 self.titlePositionAdjustment.vertical);
+  CGPoint labelCenter =
+      CGPointMake(centerX, iconImageViewCenter.y + iconHeight / 2 + self.contentVerticalMargin +
+                               labelHeight / 2 + self.titlePositionAdjustment.vertical);
   CGFloat availableContentWidth = CGRectGetWidth(contentBoundingRect);
   if (self.truncatesTitle && (labelSize.width > availableContentWidth)) {
     labelSize = CGSizeMake(availableContentWidth, labelSize.height);
@@ -440,6 +460,57 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
   return self.badge.badgeValue;
 }
 
+- (CGRect)pointerEffectHighlightRect {
+  NSMutableArray<UIView *> *visibleViews = [[NSMutableArray alloc] init];
+  if (!self.iconImageView.hidden) {
+    [visibleViews addObject:self.iconImageView];
+  }
+  if (!self.label.hidden) {
+    [visibleViews addObject:self.label];
+  }
+  if (!self.badge.hidden) {
+    [visibleViews addObject:self.badge];
+  }
+
+  // If we don't have any visible views, there is no content to frame
+  if (visibleViews.count == 0) {
+    return self.frame;
+  }
+
+  CGRect contentRect = visibleViews.firstObject.frame;
+  for (UIView *visibleView in visibleViews) {
+    contentRect = CGRectUnion(contentRect, visibleView.frame);
+  }
+
+  CGRect insetContentRect =
+      CGRectInset(contentRect, MDCButtonNavigationItemViewPointerEffectHighlightRectInset.width,
+                  MDCButtonNavigationItemViewPointerEffectHighlightRectInset.height);
+
+  // Ensure insetContentRect is the same size or smaller than self.bounds
+  CGSize boundsSize = CGRectStandardize(self.bounds).size;
+  if (insetContentRect.size.width > boundsSize.width) {
+    insetContentRect.origin.x = 0;
+    insetContentRect.size.width = boundsSize.width;
+  }
+
+  if (insetContentRect.size.height > boundsSize.height) {
+    insetContentRect.origin.y = 0;
+    insetContentRect.size.height = boundsSize.height;
+  }
+
+  return insetContentRect;
+}
+
+- (void)invalidatePointerInteractions {
+#ifdef __IPHONE_13_4
+  if (@available(iOS 13.4, *)) {
+    for (UIPointerInteraction *interaction in self.interactions) {
+      [interaction invalidate];
+    }
+  }
+#endif
+}
+
 #pragma mark - Setters
 
 - (void)setSelected:(BOOL)selected {
@@ -471,8 +542,10 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
     self.iconImageView.tintColor = self.selectedItemTintColor;
     self.label.textColor = self.selectedItemTitleColor;
   }
-  self.inkView.inkColor =
+  UIColor *rippleColor =
       [self.selectedItemTintColor colorWithAlphaComponent:MDCBottomNavigationItemViewInkOpacity];
+  self.inkView.inkColor = rippleColor;
+  self.rippleTouchController.rippleView.rippleColor = rippleColor;
 }
 
 - (void)setUnselectedItemTintColor:(UIColor *)unselectedItemTintColor {
@@ -495,6 +568,11 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
   self.badge.badgeColor = badgeColor;
 }
 
+- (void)setBadgeTextColor:(UIColor *)badgeTextColor {
+  _badgeTextColor = badgeTextColor;
+  self.badge.badgeValueLabel.textColor = badgeTextColor;
+}
+
 - (void)setBadgeValue:(NSString *)badgeValue {
   // Due to KVO, badgeValue may be of type NSNull.
   if ([badgeValue isKindOfClass:[NSNull class]]) {
@@ -514,23 +592,33 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
 
 - (void)setImage:(UIImage *)image {
   _image = [image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-  self.iconImageView.image = _image;
-  self.iconImageView.tintColor =
-      (self.selected) ? self.selectedItemTintColor : self.unselectedItemTintColor;
-  [self.iconImageView sizeToFit];
+
+  // _image updates unselected state
+  // _image updates selected state IF there is no selectedImage
+  if (!self.selected || (self.selected && !self.selectedImage)) {
+    self.iconImageView.image = _image;
+    self.iconImageView.tintColor =
+        (self.selected) ? self.selectedItemTintColor : self.unselectedItemTintColor;
+    [self.iconImageView sizeToFit];
+    [self setNeedsLayout];
+  }
 }
 
 - (void)setSelectedImage:(UIImage *)selectedImage {
   _selectedImage = [selectedImage imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-  self.iconImageView.image = _selectedImage;
-  self.iconImageView.tintColor = self.selectedItemTintColor;
-  [self.iconImageView sizeToFit];
+  if (self.selected) {
+    self.iconImageView.image = _selectedImage;
+    self.iconImageView.tintColor = self.selectedItemTintColor;
+    [self.iconImageView sizeToFit];
+    [self setNeedsLayout];
+  }
 }
 
 - (void)setTitle:(NSString *)title {
   _title = [title copy];
   self.label.text = _title;
   self.button.accessibilityLabel = [self accessibilityLabelWithTitle:_title];
+  [self setNeedsLayout];
 }
 
 - (void)setTitleVisibility:(MDCBottomNavigationBarTitleVisibility)titleVisibility {
@@ -553,11 +641,20 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
   return self.button.accessibilityValue;
 }
 
-- (void)setAccessibilityIdentifier:(NSString *)accessibilityIdentifier {
-  self.button.accessibilityIdentifier = accessibilityIdentifier;
+- (void)setAccessibilityHint:(NSString *)accessibilityHint {
+  [super setAccessibilityHint:accessibilityHint];
+  self.button.accessibilityHint = accessibilityHint;
 }
 
-- (NSString *)accessibilityIdentifier {
+- (NSString *)accessibilityHint {
+  return self.button.accessibilityHint;
+}
+
+- (void)setAccessibilityElementIdentifier:(NSString *)accessibilityElementIdentifier {
+  self.button.accessibilityIdentifier = accessibilityElementIdentifier;
+}
+
+- (NSString *)accessibilityElementIdentifier {
   return self.button.accessibilityIdentifier;
 }
 
@@ -566,6 +663,20 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
     _titlePositionAdjustment = titlePositionAdjustment;
     [self setNeedsLayout];
   }
+}
+
+- (NSInteger)renderedTitleNumberOfLines {
+  return self.titleBelowIcon ? _titleNumberOfLines : kDefaultTitleNumberOfLines;
+}
+
+- (void)setTitleNumberOfLines:(NSInteger)titleNumberOfLines {
+  _titleNumberOfLines = titleNumberOfLines;
+  self.label.numberOfLines = [self renderedTitleNumberOfLines];
+}
+
+- (void)setTitleBelowIcon:(BOOL)titleBelowIcon {
+  _titleBelowIcon = titleBelowIcon;
+  self.label.numberOfLines = [self renderedTitleNumberOfLines];
 }
 
 #pragma mark - Resource bundle
@@ -586,6 +697,32 @@ static NSString *const kMDCBottomNavigationItemViewTabString = @"tab";
   NSBundle *bundle = [NSBundle bundleForClass:[MDCBottomNavigationBar class]];
   NSString *resourcePath = [(nil == bundle ? [NSBundle mainBundle] : bundle) resourcePath];
   return [resourcePath stringByAppendingPathComponent:bundleName];
+}
+
+#pragma mark - UILargeContentViewerItem
+
+- (BOOL)showsLargeContentViewer {
+  return YES;
+}
+
+- (NSString *)largeContentTitle {
+  if (_largeContentTitle) {
+    return _largeContentTitle;
+  }
+
+  return self.title;
+}
+
+- (UIImage *)largeContentImage {
+  if (_largeContentImage) {
+    return _largeContentImage;
+  }
+
+  return self.image;
+}
+
+- (BOOL)scalesLargeContentImage {
+  return _largeContentImage == nil;
 }
 
 @end

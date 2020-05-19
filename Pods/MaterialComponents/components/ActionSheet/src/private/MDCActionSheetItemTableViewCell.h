@@ -31,8 +31,44 @@
 
 @property(nonatomic, strong, nullable) UIColor *actionTextColor;
 
-@property(nonatomic, strong, nullable) UIColor *inkColor;
+/**
+ The ripple color for the action items within an action sheet.
+
+ @note Defaults and resets to black with a 14% opacity.
+ */
+@property(nonatomic, strong, null_resettable) UIColor *rippleColor;
 
 @property(nonatomic) UIImageRenderingMode imageRenderingMode;
+
+/**
+ Determines if padding needs to be added to the titleLabel.
+
+ @note Defaults to @c NO.
+ */
+@property(nonatomic, assign) BOOL addLeadingPadding;
+
+/**
+ The inset or outset margins for the rectangle surrounding all of the button’s content.
+
+ Defaults to @c UIEdgeInsetsZero.
+ */
+@property(nonatomic, assign) UIEdgeInsets contentEdgeInsets;
+
+/**
+ The color of the divider at the top of the action.
+
+ @note Defaults to clear.
+ */
+@property(nonatomic, copy, nonnull) UIColor *dividerColor;
+
+/**
+ Controls whether a divider is shown at the top of the action.
+
+ @note Defaults to @c NO.
+ */
+@property(nonatomic, assign) BOOL showsDivider;
+
+/** The label used to represent the action's @c title. */
+@property(nonatomic, strong, nonnull) UILabel *actionLabel;
 
 @end

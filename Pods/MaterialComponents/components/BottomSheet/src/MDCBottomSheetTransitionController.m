@@ -50,6 +50,7 @@ static const NSTimeInterval MDCBottomSheetTransitionDuration = 0.25;
                                                            presentingViewController:presenting];
   presentationController.trackingScrollView = self.trackingScrollView;
   presentationController.dismissOnBackgroundTap = self.dismissOnBackgroundTap;
+  presentationController.dismissOnDraggingDownSheet = self.dismissOnDraggingDownSheet;
   presentationController.scrimColor = _scrimColor;
   presentationController.scrimAccessibilityTraits = _scrimAccessibilityTraits;
   presentationController.isScrimAccessibilityElement = _isScrimAccessibilityElement;
@@ -150,7 +151,7 @@ static const NSTimeInterval MDCBottomSheetTransitionDuration = 0.25;
     CGFloat leftPad = (containerSize.width - width) / 2;
     return CGRectMake(leftPad, 0, width, containerSize.height);
   } else {
-    return containerView.frame;
+    return CGRectStandardize(containerView.bounds);
   }
 }
 

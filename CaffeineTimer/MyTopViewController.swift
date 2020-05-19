@@ -10,12 +10,11 @@ import UIKit
 import HealthKit
 import UserNotifications
 import CaffeineTimerEmbedded
-import DJKUtilAdMob
 import LMGaugeView
 import MaterialComponents.MaterialFeatureHighlight
-import DJKUtilities
+import DJKPurchaseService
 
-class MyTopViewController: DJKAdMobBaseViewController,
+class MyTopViewController: HelpingMonetizeViewController,
     GaugeTimerUtilDelegate,
     LMGaugeViewDelegate
 {
@@ -26,7 +25,7 @@ class MyTopViewController: DJKAdMobBaseViewController,
     
     let myGaugeTimerUtilities = GaugeTimerUtilities.sharedInstance
     //let myHealthKitUtils = HealthKitUtils.sharedInstance
-    var shownTutorial = false
+    private var shownTutorial = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -57,7 +56,7 @@ class MyTopViewController: DJKAdMobBaseViewController,
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        updateAllAdBannerView()
+        refreshAllAd()
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -79,7 +78,7 @@ class MyTopViewController: DJKAdMobBaseViewController,
 
     // MARK: - LMGaugeViewDelegate
     func gaugeView(_ gaugeView: LMGaugeView!, ringStokeColorForValue value: CGFloat) -> UIColor! {
-        if value >= self.caffeineGaugeView.limitValue {
+        if let limit = caffeineGaugeView.limitValues.first as? CGFloat, limit < value {
             return getMyRedColor()
         }
         return getMyGreenColor()
@@ -111,7 +110,7 @@ class MyTopViewController: DJKAdMobBaseViewController,
     func initGaugeView() {
         self.caffeineGaugeView.minValue = CGFloat(CaffeineValue.MIN_CAFFEINE_DAY)
         self.caffeineGaugeView.maxValue = CGFloat(CaffeineValue.MAX_CAFFEINE_DAY)
-        self.caffeineGaugeView.limitValue = CGFloat(CaffeineValue.CAFFEINE_PER_DRINK * 2)
+        self.caffeineGaugeView.limitValues = [CGFloat(CaffeineValue.CAFFEINE_PER_DRINK * 2)]
         
         let bounds = UIScreen.main.bounds
         if 480 >= bounds.size.height {
@@ -179,9 +178,7 @@ class MyTopViewController: DJKAdMobBaseViewController,
             HealthKitUtils.saveCaffeine()
             updateGaugeDispType()
             
-            if nil != admobInterstitial && admobInterstitial.isReady {
-                admobInterstitial.present(fromRootViewController: self)
-            }
+            showAdMobInterstitial(rootViewController: self)
             return
         }
         
@@ -228,7 +225,7 @@ class MyTopViewController: DJKAdMobBaseViewController,
     
     @objc func appWillEnterForeground(_ notification: Notification) {
         myGaugeTimerUtilities.loadRemainGauge()
-        updateAllAdBannerView()
+        refreshAllAd()
         updateTimerCaffeineGauge()
     }
     
@@ -236,21 +233,15 @@ class MyTopViewController: DJKAdMobBaseViewController,
         executeShortcutFuelGauge()
     }
     
-    func updateAllAdBannerView() {
-        self.updateAdMobBannerView()
-        admobInterstitial = createAndLoadAdMobInterstitial("ca-app-pub-3940256099942544/4411468910", sender: self)
-    }
-    
-    func updateAdMobBannerView() {
-        addAdMobBannerView("ca-app-pub-3940256099942544/2934735716")
-        DJKViewUtils.setConstraintBottomView(admobBannerView, currentAndTo: self.view)
-        DJKViewUtils.setConstraintCenterX(admobBannerView, currentView: self.view)
+    private func refreshAllAd() {
+        loadAdMobInterstitial(unitId: "ca-app-pub-3940256099942544/4411468910")
+        addAdMobBannerView(unitId: "ca-app-pub-3940256099942544/2934735716", edge: .bottom)
     }
     
     // MARK: - Action
     @IBAction func tapCoffeeButton(_ sender: AnyObject) {
+        shownTutorial = true
         myGaugeTimerUtilities.fuelCaffeineGaugeTimer(self, senderSelector: #selector(MyTopViewController.fuelGaugeTimer))
-        //tutorialPopLabel.dismiss()
     }
     
     @IBAction func changeSegmentGauge(_ sender: AnyObject) {

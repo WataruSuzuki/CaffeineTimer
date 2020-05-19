@@ -23,6 +23,11 @@
 @property(nonatomic, readonly) MDCSheetState sheetState;
 @property(nonatomic) CGFloat preferredSheetHeight;
 
+/**
+ When set to false, the bottom sheet controller can't be dismissed by dragging the sheet down.
+ */
+@property(nonatomic, assign) BOOL dismissOnDraggingDownSheet;
+
 - (nonnull instancetype)initWithFrame:(CGRect)frame
                           contentView:(nonnull UIView *)contentView
                            scrollView:(nullable UIScrollView *)scrollView NS_DESIGNATED_INITIALIZER;
@@ -32,10 +37,3 @@
 
 @end
 
-@protocol MDCSheetContainerViewDelegate <NSObject>
-
-- (void)sheetContainerViewDidHide:(nonnull MDCSheetContainerView *)containerView;
-- (void)sheetContainerViewWillChangeState:(nonnull MDCSheetContainerView *)containerView
-                               sheetState:(MDCSheetState)sheetState;
-
-@end

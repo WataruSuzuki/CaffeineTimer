@@ -17,7 +17,7 @@ default_platform(:ios)
 
 platform :ios do
     desc "Tests"
-    lane :tests do
+    lane :tests_latest do
     run_tests(
         workspace: "CaffeineTimer.xcworkspace",
         scheme: "CaffeineTimer",
@@ -28,8 +28,7 @@ platform :ios do
             # "iPad Pro (12.9 inch) (10.3.1)",
             # "iPhone X (11.4)",
             # "iPad Pro (10.5-inch) (11.4)",
-            "iPhone XS Max",
-            "iPad Pro (12.9-inch) (3rd generation)"
+            "iPhone 11 Pro Max"
         ],
         disable_concurrent_testing: true,
         configuration: 'Debug'

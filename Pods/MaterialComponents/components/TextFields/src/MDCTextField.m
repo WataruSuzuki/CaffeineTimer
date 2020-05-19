@@ -58,6 +58,8 @@ static const CGFloat MDCTextInputTextRectYCorrection = 1;
 @implementation MDCTextField
 
 @dynamic borderStyle;
+@synthesize mdc_elevationDidChangeBlock = _mdc_elevationDidChangeBlock;
+@synthesize mdc_overrideBaseElevation = _mdc_overrideBaseElevation;
 
 - (instancetype)initWithFrame:(CGRect)frame {
   self = [super initWithFrame:frame];
@@ -139,6 +141,7 @@ static const CGFloat MDCTextInputTextRectYCorrection = 1;
 
   [self setContentCompressionResistancePriority:UILayoutPriorityDefaultHigh + 1
                                         forAxis:UILayoutConstraintAxisVertical];
+  _mdc_overrideBaseElevation = -1;
 }
 
 #pragma mark - Underline View Implementation
@@ -330,12 +333,25 @@ static const CGFloat MDCTextInputTextRectYCorrection = 1;
 }
 
 - (void)setTextColor:(UIColor *)textColor {
-  [super setTextColor:textColor];
-  _fundament.textColor = textColor;
+  // This identity check was added in
+  // https://github.com/material-components/material-components-ios/pull/9480 in response to
+  // b/148159587
+  if (textColor != self.textColor) {
+    [super setTextColor:textColor];
+    _fundament.textColor = textColor;
+  }
 }
 
 - (UIEdgeInsets)textInsets {
   return self.fundament.textInsets;
+}
+
+- (CGFloat)sizeThatFitsWidthHint {
+  return self.fundament.sizeThatFitsWidthHint;
+}
+
+- (void)setSizeThatFitsWidthHint:(CGFloat)sizeThatFitsWidthHint {
+  self.fundament.sizeThatFitsWidthHint = sizeThatFitsWidthHint;
 }
 
 - (MDCTextInputTextInsetsMode)textInsetsMode {
@@ -430,8 +446,9 @@ static const CGFloat MDCTextInputTextRectYCorrection = 1;
 }
 
 - (void)setFont:(UIFont *)font {
+  UIFont *previousFont = self.font;
   [super setFont:font];
-  [_fundament didSetFont];
+  [_fundament didSetFont:previousFont];
 }
 
 - (void)setEnabled:(BOOL)enabled {
@@ -708,9 +725,10 @@ static const CGFloat MDCTextInputTextRectYCorrection = 1;
 }
 
 - (CGSize)sizeThatFits:(CGSize)size {
+  self.sizeThatFitsWidthHint = size.width;
   CGSize sizeThatFits = [self intrinsicContentSize];
-  sizeThatFits.width = size.width;
-
+  sizeThatFits.width = self.sizeThatFitsWidthHint;
+  self.sizeThatFitsWidthHint = 0;
   return sizeThatFits;
 }
 
@@ -728,6 +746,18 @@ static const CGFloat MDCTextInputTextRectYCorrection = 1;
   if ([self.positioningDelegate respondsToSelector:@selector(textInputDidLayoutSubviews)]) {
     [self.positioningDelegate textInputDidLayoutSubviews];
   }
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+  [super traitCollectionDidChange:previousTraitCollection];
+
+  if (self.traitCollectionDidChangeBlock) {
+    self.traitCollectionDidChangeBlock(self, previousTraitCollection);
+  }
+}
+
+- (CGFloat)mdc_currentElevation {
+  return 0;
 }
 
 - (void)updateConstraints {
@@ -749,11 +779,6 @@ static const CGFloat MDCTextInputTextRectYCorrection = 1;
 }
 
 - (UIView *)viewForLastBaselineLayout {
-  return self.inputLayoutStrut;
-}
-
-// TODO: (#4390) Remove when we drop iOS 9 support
-- (UIView *)viewForBaselineLayout {
   return self.inputLayoutStrut;
 }
 
@@ -797,18 +822,41 @@ static const CGFloat MDCTextInputTextRectYCorrection = 1;
   [_fundament mdc_setAdjustsFontForContentSizeCategory:adjusts];
 }
 
-- (NSString *)accessibilityValue {
+/*
+ Returns a combination of the following:
+ -  The superclass `accessibilityLabel` value
+ -  The placeholder label.
+ -  The leading underline label (if not nil).
+ -  The trailing underline label (if not nil).
+ */
+- (NSString *)accessibilityLabel {
   NSMutableArray *accessibilityStrings = [[NSMutableArray alloc] init];
-  if ([super accessibilityValue].length > 0) {
-    [accessibilityStrings addObject:[super accessibilityValue]];
+  if ([super accessibilityLabel].length > 0) {
+    [accessibilityStrings addObject:[super accessibilityLabel]];
   } else if (self.placeholderLabel.accessibilityLabel.length > 0) {
     [accessibilityStrings addObject:self.placeholderLabel.accessibilityLabel];
   }
   if (self.leadingUnderlineLabel.accessibilityLabel.length > 0) {
     [accessibilityStrings addObject:self.leadingUnderlineLabel.accessibilityLabel];
   }
-  return accessibilityStrings.count > 0 ? [accessibilityStrings componentsJoinedByString:@" "]
+  if (self.trailingUnderlineLabel.accessibilityLabel.length > 0) {
+    [accessibilityStrings addObject:self.trailingUnderlineLabel.accessibilityLabel];
+  }
+  return accessibilityStrings.count > 0 ? [accessibilityStrings componentsJoinedByString:@", "]
                                         : nil;
+}
+
+- (NSString *)accessibilityValue {
+  // If there is no text, return nothing. If there is placeholder text, we don't want it returning
+  // that as the `accessibilityValue`. Instead, we should only return user-input text.
+  if (self.text.length > 0) {
+    return [super accessibilityValue];
+  }
+
+  // Returning nil here causes iOS to default to [super accessibilityValue], which results in both
+  // accessibilityValue and accessibilityLabel being read out by VoiceOver, so we return the empty
+  // string instead.
+  return @"";
 }
 
 #pragma mark - Testing

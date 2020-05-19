@@ -2,7 +2,7 @@
 //  NADFullBoardLoader.h
 //  NendAd
 //
-//  Copyright © 2016年 F@N Communications, Inc. All rights reserved.
+//  Copyright © 2016年 FAN Communications, Inc. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -20,7 +20,8 @@ typedef void(^NADFullBoardLoaderCompletionHandler)(NADFullBoard *ad, NADFullBoar
 
 @interface NADFullBoardLoader : NSObject
 
-- (instancetype)initWithSpotId:(NSString *)spotId apiKey:(NSString *)apiKey;
+- (instancetype)initWithSpotId:(NSString *)spotId apiKey:(NSString *)apiKey __deprecated_msg("This method is deprecated. Use newer one that specified spotID parameter as NSInteger.");
+- (instancetype)initWithSpotID:(NSInteger)spotID apiKey:(NSString *)apiKey;
 - (void)loadAdWithCompletionHandler:(NADFullBoardLoaderCompletionHandler)handler;
 
 @end

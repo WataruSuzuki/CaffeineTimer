@@ -2,7 +2,7 @@
 //  NADNativeTableViewHelper.h
 //  NendAd
 //
-//  Copyright (c) 2015年 F@N Communications, Inc. All rights reserved.
+//  Copyright (c) 2015年 FAN Communications, Inc. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -29,6 +29,12 @@
                              apiKey:(NSString *)apiKey
               advertisingExplicitly:(NADNativeAdvertisingExplicitly)advertisingExplicitly
                         adPlacement:(NADNativeTableViewPlacement *)adPlacement
+                           delegate:(id<NADNativeTableViewHelperDelegate>)delegate __deprecated_msg("This method is deprecated. Use newer one that specified spotID parameter as NSInteger.");
++ (instancetype)helperWithTableView:(UITableView *)tableView
+                             spotID:(NSInteger)spotID
+                             apiKey:(NSString *)apiKey
+              advertisingExplicitly:(NADNativeAdvertisingExplicitly)advertisingExplicitly
+                        adPlacement:(NADNativeTableViewPlacement *)adPlacement
                            delegate:(id<NADNativeTableViewHelperDelegate>)delegate;
 
 + (instancetype)helperWithTableView:(UITableView *)tableView
@@ -37,10 +43,24 @@
               advertisingExplicitly:(NADNativeAdvertisingExplicitly)advertisingExplicitly
                         adPlacement:(NADNativeTableViewPlacement *)adPlacement
                            delegate:(id<NADNativeTableViewHelperDelegate>)delegate
+               placeholderCellClass:(Class)placeholderCellClass __deprecated_msg("This method is deprecated. Use newer one that specified spotID parameter as NSInteger.");
++ (instancetype)helperWithTableView:(UITableView *)tableView
+                             spotID:(NSInteger)spotID
+                             apiKey:(NSString *)apiKey
+              advertisingExplicitly:(NADNativeAdvertisingExplicitly)advertisingExplicitly
+                        adPlacement:(NADNativeTableViewPlacement *)adPlacement
+                           delegate:(id<NADNativeTableViewHelperDelegate>)delegate
                placeholderCellClass:(Class)placeholderCellClass;
 
 + (instancetype)helperWithTableView:(UITableView *)tableView
                              spotId:(NSString *)spotId
+                             apiKey:(NSString *)apiKey
+              advertisingExplicitly:(NADNativeAdvertisingExplicitly)advertisingExplicitly
+                        adPlacement:(NADNativeTableViewPlacement *)adPlacement
+                           delegate:(id<NADNativeTableViewHelperDelegate>)delegate
+             placeholderCellNibName:(NSString *)placeholderCellNibName __deprecated_msg("This method is deprecated. Use newer one that specified spotID parameter as NSInteger.");
++ (instancetype)helperWithTableView:(UITableView *)tableView
+                             spotID:(NSInteger)spotID
                              apiKey:(NSString *)apiKey
               advertisingExplicitly:(NADNativeAdvertisingExplicitly)advertisingExplicitly
                         adPlacement:(NADNativeTableViewPlacement *)adPlacement

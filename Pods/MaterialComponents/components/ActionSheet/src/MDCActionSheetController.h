@@ -14,9 +14,13 @@
 
 #import <UIKit/UIKit.h>
 
-#import <MaterialComponents/MaterialBottomSheet.h>
+#import "MDCActionSheetAction.h"
+#import "MaterialBottomSheet.h"
+#import "MaterialElevation.h"
 
 @class MDCActionSheetAction;
+@class MDCActionSheetController;
+@protocol MDCActionSheetControllerDelegate;
 
 /**
  MDCActionSheetController displays an alert message to the user, similar to
@@ -38,7 +42,8 @@
  in a sheet from the bottom.
 
  */
-__attribute__((objc_subclassing_restricted)) @interface MDCActionSheetController : UIViewController
+__attribute__((objc_subclassing_restricted)) @interface MDCActionSheetController
+    : UIViewController<MDCElevatable, MDCElevationOverriding>
 
 /**
  Designated initializer to create and return a view controller for displaying an alert to the user.
@@ -89,6 +94,11 @@ __attribute__((objc_subclassing_restricted)) @interface MDCActionSheetController
 - (void)addAction:(nonnull MDCActionSheetAction *)action;
 
 /**
+ The object that acts as the delegate of the @c MDCActionSheetController
+*/
+@property(nonatomic, weak, nullable) id<MDCActionSheetControllerDelegate> delegate;
+
+/**
  The actions that the user can take in response to the action sheet.
 
  The order of the actions in the array matches the order in which they were added
@@ -110,6 +120,14 @@ __attribute__((objc_subclassing_restricted)) @interface MDCActionSheetController
  If this is updated after presentation the view will be updated to match the new value.
  */
 @property(nonatomic, nullable, copy) NSString *message;
+
+/**
+ A block that is invoked when the @c MDCActionSheetController receives a call to @c
+ traitCollectionDidChange:. The block is called after the call to the superclass.
+ */
+@property(nonatomic, copy, nullable) void (^traitCollectionDidChangeBlock)
+    (MDCActionSheetController *_Nonnull actionSheet,
+     UITraitCollection *_Nullable previousTraitCollection);
 
 /**
  Indicates whether the button should automatically update its font when the device’s
@@ -172,14 +190,52 @@ __attribute__((objc_subclassing_restricted)) @interface MDCActionSheetController
 @property(nonatomic, strong, nullable) UIColor *actionTintColor;
 
 /**
- The ink color for the action items within an action sheet.
+ The ripple color for the action items within an action sheet.
  */
-@property(nonatomic, strong, nullable) UIColor *inkColor;
+@property(nonatomic, strong, nullable) UIColor *rippleColor;
 
 /**
  The image rendering mode for all actions within an action sheet.
  */
 @property(nonatomic) UIImageRenderingMode imageRenderingMode;
+
+/**
+ Determines if a divider should be shown between the header and actions. To customize the divider
+ color see @c headerDividerColor.
+
+ Defaults to NO.
+ */
+@property(nonatomic, assign) BOOL showsHeaderDivider;
+
+/**
+ The color of the divider between the header and actions.
+
+ Defaults to a semi transparent black.
+ */
+@property(nonatomic, copy, nonnull) UIColor *headerDividerColor;
+
+/**
+ The elevation of the action sheet. Defaults to @c MDCShadowElevationModalBottomSheet.
+ */
+@property(nonatomic, assign) MDCShadowElevation elevation;
+
+/**
+ The inset or outset margins for the rectangle surrounding all of each action's content.
+
+ Defaults to @c UIEdgeInsetsZero.
+ */
+@property(nonatomic, assign) UIEdgeInsets contentEdgeInsets;
+
+/**
+ Determines the alignment behavior of all title leading edges.
+
+ When YES, all title leading edges will be aligned with one another.
+
+ When NO, each title will be positioned individually based on whether it has an image or not.
+
+ Defaults to NO.
+ */
+@property(nonatomic, assign) BOOL alwaysAlignTitleLeadingEdges;
 
 @property(nonatomic, strong, readonly, nonnull)
     MDCBottomSheetTransitionController *transitionController;
@@ -188,57 +244,5 @@ __attribute__((objc_subclassing_restricted)) @interface MDCActionSheetController
     (nullable id<UIViewControllerTransitioningDelegate>)transitioningDelegate NS_UNAVAILABLE;
 
 - (void)setModalPresentationStyle:(UIModalPresentationStyle)modalPresentationStyle NS_UNAVAILABLE;
-
-@end
-
-/**
- MDCActionSheetActionHandler is a block that will be invoked when the action is
- selected.
- */
-typedef void (^MDCActionSheetHandler)(MDCActionSheetAction *_Nonnull action);
-
-/**
- An instance of MDCActionSheetAction is passed to MDCActionSheetController to
- add an action to the action sheet.
- */
-@interface MDCActionSheetAction : NSObject <NSCopying, UIAccessibilityIdentification>
-
-/**
- Returns an action sheet action with the populated given values.
-
- @param title The title of the list item shown in the list
- @param image The icon of the list item shown in the list
- @param handler A block to execute when the user selects the action.
- @return An initialized MDCActionSheetAction object.
- */
-+ (nonnull instancetype)actionWithTitle:(nonnull NSString *)title
-                                  image:(nullable UIImage *)image
-                                handler:(__nullable MDCActionSheetHandler)handler;
-
-/**
- Action sheet actions must be created with actionWithTitle:image:handler:
- */
-- (nonnull instancetype)init NS_UNAVAILABLE;
-
-/**
- Title of the list item shown on the action sheet.
-
- Action sheet actions must have a title that will be set within actionWithTitle:image:handler:
- method.
- */
-@property(nonatomic, nonnull, readonly) NSString *title;
-
-/**
- Image of the list item shown on the action sheet.
-
- Action sheet actions must have an image that will be set within actionWithTitle:image:handler:
- method.
-*/
-@property(nonatomic, nullable, readonly) UIImage *image;
-
-/**
- The @c accessibilityIdentifier for the view associated with this action.
- */
-@property(nonatomic, nullable, copy) NSString *accessibilityIdentifier;
 
 @end

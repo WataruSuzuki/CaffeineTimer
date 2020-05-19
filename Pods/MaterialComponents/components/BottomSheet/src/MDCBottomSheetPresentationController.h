@@ -14,37 +14,13 @@
 
 #import <UIKit/UIKit.h>
 #import "MDCBottomSheetController.h"
+// TODO(b/151929968): Delete import of MDCBottomSheetPresentationControllerDelegate.h when client
+// code has been migrated to no longer import MDCBottomSheetPresentationControllerDelegate as a
+// transitive dependency.
+#import "MDCBottomSheetPresentationControllerDelegate.h"
 
 @class MDCBottomSheetPresentationController;
-
-/**
- Delegate for MDCBottomSheetPresentationController.
- */
-@protocol MDCBottomSheetPresentationControllerDelegate <UIAdaptivePresentationControllerDelegate>
-@optional
-
-/**
- Called before the bottom sheet is presented.
-
- @param bottomSheet The MDCBottomSheetPresentationController being presented.
- */
-- (void)prepareForBottomSheetPresentation:
-    (nonnull MDCBottomSheetPresentationController *)bottomSheet;
-
-/**
- Called after dimissing the bottom sheet to let clients know it is no longer onscreen. The bottom
- sheet controller calls this method only in response to user actions such as tapping the background
- or dragging the sheet offscreen. This method is not called if the bottom sheet is dismissed
- programmatically.
-
- @param bottomSheet The MDCBottomSheetPresentationController that was dismissed.
- */
-- (void)bottomSheetPresentationControllerDidDismissBottomSheet:
-    (nonnull MDCBottomSheetPresentationController *)bottomSheet;
-
-- (void)bottomSheetWillChangeState:(nonnull MDCBottomSheetPresentationController *)bottomSheet
-                        sheetState:(MDCSheetState)sheetState;
-@end
+@protocol MDCBottomSheetPresentationControllerDelegate;
 
 /**
  A UIPresentationController for presenting a modal view controller as a bottom sheet.
@@ -63,6 +39,22 @@
  When set to false, the bottom sheet controller can't be dismissed by tapping outside of sheet area.
  */
 @property(nonatomic, assign) BOOL dismissOnBackgroundTap;
+
+/**
+ When set to false, the bottom sheet controller can't be dismissed by dragging the sheet down.
+
+ Defaults to @c YES.
+ */
+@property(nonatomic, assign) BOOL dismissOnDraggingDownSheet;
+
+/**
+ When this property is set to @c YES the MDCBottomSheetController's @c safeAreaInsets are set as @c
+ additionalSafeAreaInsets on the presented view controller. This property only works on iOS 11 and
+ above.
+
+ @note Defaults to @c NO.
+ */
+@property(nonatomic, assign) BOOL shouldPropagateSafeAreaInsetsToPresentedViewController;
 
 /**
  This is used to set a custom height on the sheet view.
@@ -116,5 +108,13 @@
  Delegate to tell the presenter when to dismiss.
  */
 @property(nonatomic, weak, nullable) id<MDCBottomSheetPresentationControllerDelegate> delegate;
+
+/**
+ A block that is invoked when the @c MDCBottomSheetPresentationController receives a call to @c
+ traitCollectionDidChange:. The block is called after the call to the superclass.
+ */
+@property(nonatomic, copy, nullable) void (^traitCollectionDidChangeBlock)
+    (MDCBottomSheetPresentationController *_Nonnull bottomSheetPresentationController,
+     UITraitCollection *_Nullable previousTraitCollection);
 
 @end

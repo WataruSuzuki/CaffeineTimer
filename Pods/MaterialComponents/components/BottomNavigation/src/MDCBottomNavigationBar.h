@@ -14,6 +14,11 @@
 
 #import <UIKit/UIKit.h>
 
+#import "MaterialAvailability.h"
+// TODO(b/151929968): Delete import of MDCBottomNavigationBarDelegate.h when client code has been
+// migrated to no longer import MDCBottomNavigationBarDelegate as a transitive dependency.
+#import "MDCBottomNavigationBarDelegate.h"
+#import "MaterialElevation.h"
 #import "MaterialShadowElevations.h"
 
 @protocol MDCBottomNavigationBarDelegate;
@@ -57,7 +62,7 @@ typedef NS_ENUM(NSInteger, MDCBottomNavigationBarAlignment) {
  can be selected at at time. The selected item's title text is displayed. Title text for unselected
  items are hidden.
  */
-@interface MDCBottomNavigationBar : UIView
+@interface MDCBottomNavigationBar : UIView <MDCElevatable, MDCElevationOverriding>
 
 /** The bottom navigation bar delegate. */
 @property(nonatomic, weak, nullable) id<MDCBottomNavigationBarDelegate> delegate;
@@ -93,6 +98,17 @@ typedef NS_ENUM(NSInteger, MDCBottomNavigationBarAlignment) {
  Default is system font.
  */
 @property(nonatomic, strong, nonnull) UIFont *itemTitleFont UI_APPEARANCE_SELECTOR;
+
+/**
+ Background color for badges. Default is a red color. Only applies if the @c UITabBarItem
+ @c badgeColor is `nil`.
+ */
+@property(nonatomic, copy, nullable) UIColor *itemBadgeBackgroundColor;
+
+/**
+ Text color for badges. Default is white.
+ */
+@property(nonatomic, copy, nullable) UIColor *itemBadgeTextColor;
 
 /**
  Color of selected item. Applies color to items' icons and text. If set also sets
@@ -152,15 +168,11 @@ typedef NS_ENUM(NSInteger, MDCBottomNavigationBarAlignment) {
 @property(nonatomic, assign) CGFloat itemsContentHorizontalMargin;
 
 /**
- Flag to allow clients to gradually correct the size/position of the Bottom Navigation bar relative
- to the safe area on iOS 11+.
+ The amount of horizontal padding on the leading/trailing edges of each bar item. Defaults to 12.
 
- NOTE: In an upcoming release, this flag will be removed and the default behavior will be to exclude
- the safe area in size calculations.
-
- Defaults to @c YES.
+ @note: The amount of horizontal space between the bar items will be double this value.
  */
-@property(nonatomic, assign) BOOL sizeThatFitsIncludesSafeArea;
+@property(nonatomic, assign) CGFloat itemsHorizontalPadding;
 
 /**
  NSLayoutAnchor for the bottom of the bar items.
@@ -184,6 +196,30 @@ typedef NS_ENUM(NSInteger, MDCBottomNavigationBarAlignment) {
  */
 @property(nonatomic, assign) MDCShadowElevation elevation;
 
+/** The color of the shadow of the bottom navigation bar. Defaults to black. */
+@property(nonatomic, copy, nonnull) UIColor *shadowColor;
+
+/**
+ The number of lines used for item titles. It is possible that long titles may cause the text to
+ extend beyond the safe area of the Bottom Navigation bar. It is recommended that short titles are
+ used before this value is changed.
+
+ Defaults to 1.
+
+ @note This property has no effect if the bar items are laid-out with the image and title
+       side-by-side. This may be the case if the bar's @c alignment is
+       @c MDCBottomNavigationBarAlignmentJustifiedAdjacentTitles.
+ */
+@property(nonatomic, assign) NSInteger titlesNumberOfLines;
+
+/**
+A block that is invoked when the @c MDCBottomNavigationBar receives a call to @c
+traitCollectionDidChange:. The block is called after the call to the superclass.
+*/
+@property(nonatomic, copy, nullable) void (^traitCollectionDidChangeBlock)
+    (MDCBottomNavigationBar *_Nonnull bottomNavigationBar,
+     UITraitCollection *_Nullable previousTraitCollection);
+
 /**
  Returns the navigation bar subview associated with the specific item.
 
@@ -191,29 +227,54 @@ typedef NS_ENUM(NSInteger, MDCBottomNavigationBarAlignment) {
  */
 - (nullable UIView *)viewForItem:(nonnull UITabBarItem *)item;
 
+/**
+ Flag to allow clients to gradually correct the size/position of the Bottom Navigation bar relative
+ to the safe area on iOS 11+.
+
+ NOTE: In an upcoming release, this flag will be removed and the default behavior will be to exclude
+ the safe area in size calculations.
+
+ Defaults to @c NO.
+ */
+@property(nonatomic, assign) BOOL sizeThatFitsIncludesSafeArea __deprecated_msg(
+    "This was a migration API and is being removed.");
+
 @end
 
-#pragma mark - MDCBottomNavigationBarDelegate
+/** APIs that are deprecated. No new code should rely on these APIs. */
+@interface MDCBottomNavigationBar (ToBeDeprecated)
 
 /**
- Delegate protocol for MDCBottomNavigationBar. Clients may implement this protocol to receive
- notifications of selection changes by user action in the bottom navigation bar.
- */
-@protocol MDCBottomNavigationBarDelegate <UINavigationBarDelegate>
+ By setting this property to @c YES, the Ripple component will be used instead of Ink
+ to display visual feedback to the user.
 
-@optional
+ @note This property will eventually be enabled by default, deprecated, and then deleted as part
+ of our migration to Ripple. Learn more at
+ https://github.com/material-components/material-components-ios/tree/develop/components/Ink#migration-guide-ink-to-ripple
 
-/**
- Called before the selected item changes by user action. Return YES to allow the selection. If not
- implemented all items changes are allowed.
+ Defaults to NO.
  */
-- (BOOL)bottomNavigationBar:(nonnull MDCBottomNavigationBar *)bottomNavigationBar
-           shouldSelectItem:(nonnull UITabBarItem *)item;
-
-/**
- Called when the selected item changes by user action.
- */
-- (void)bottomNavigationBar:(nonnull MDCBottomNavigationBar *)bottomNavigationBar
-              didSelectItem:(nonnull UITabBarItem *)item;
+@property(nonatomic, assign) BOOL enableRippleBehavior;
 
 @end
+
+#if MDC_AVAILABLE_SDK_IOS(13_0)
+/**
+ This component supports UIKit's Large Content Viewer. It is recommended that images associated with
+ each tab bar item be backed with a PDF image with "preserve vector data" enabled within the assets
+ entry in the catalog. This ensures that the image is scaled appropriately in the content viewer.
+
+ Alternatively specify an image to use for the large content viewer using UITabBarItem's property
+ @c largeContentSizeImage . If an image is specified, the given image is used as-is for the large
+ content viewer and will not be scaled.
+
+ If the image is not backed by PDF and a @c largeContentSizeImage is not specified, the given
+ @c image will be scaled and may be blurry.
+
+ For more details on the Large Content Viewer see:
+ https://developer.apple.com/videos/play/wwdc2019/261/
+ */
+@interface MDCBottomNavigationBar (UILargeContentViewerInteractionDelegate) <
+    UILargeContentViewerInteractionDelegate>
+@end
+#endif  // MDC_AVAILABLE_SDK_IOS(13_0)

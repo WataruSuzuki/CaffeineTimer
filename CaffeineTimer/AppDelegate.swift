@@ -8,6 +8,7 @@
 
 import UIKit
 import UserNotifications
+import DJKPurchaseService
 
 @UIApplicationMain
 class AppDelegate: UIResponder,
@@ -30,6 +31,7 @@ class AppDelegate: UIResponder,
     static let applicationShortcutUserInfoIconKey = "applicationShortcutUserInfoIconKey"
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        PurchaseService.shared
         if #available(iOS 10.0, *) {
             UNUserNotificationCenter.current().delegate = self
             UNUserNotificationCenter.current().removeAllDeliveredNotifications()

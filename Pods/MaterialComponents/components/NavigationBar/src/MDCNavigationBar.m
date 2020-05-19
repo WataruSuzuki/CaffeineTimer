@@ -101,23 +101,28 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
 @implementation MDCNavigationBarSandbagView
 @end
 
-@interface MDCNavigationBar (PrivateAPIs) <MDCButtonBarDelegate>
+@interface MDCNavigationBar () <MDCButtonBarDelegate>
 
 /// titleLabel is hidden if there is a titleView. When not hidden, displays self.title.
 - (UILabel *)titleLabel;
 - (MDCButtonBar *)leadingButtonBar;
 - (MDCButtonBar *)trailingButtonBar;
 
+@property(nonatomic, copy, nullable)
+    NSDictionary<NSAttributedStringKey, id> *titleTextAttributes UI_APPEARANCE_SELECTOR;
+
 @end
 
 @implementation MDCNavigationBar {
   id _observedNavigationItemLock;
   UINavigationItem *_observedNavigationItem;
-
+  UIColor *_inkColor;
   UILabel *_titleLabel;
 
   MDCButtonBar *_leadingButtonBar;
   MDCButtonBar *_trailingButtonBar;
+
+  BOOL _titleInsetsAreExplicit;
 
   __weak UIViewController *_watchingViewController;
 }
@@ -126,14 +131,16 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
 @synthesize trailingBarButtonItems = _trailingBarButtonItems;
 @synthesize hidesBackButton = _hidesBackButton;
 @synthesize leadingItemsSupplementBackButton = _leadingItemsSupplementBackButton;
+@synthesize titleInsets = _titleInsets;
 @synthesize titleView = _titleView;
+@synthesize mdc_elevationDidChangeBlock = _mdc_elevationDidChangeBlock;
+@synthesize mdc_overrideBaseElevation = _mdc_overrideBaseElevation;
 
 - (void)dealloc {
   [self setObservedNavigationItem:nil];
 }
 
 - (void)commonMDCNavigationBarInit {
-  _titleInsets = UIEdgeInsetsMake(0, 16, 0, 16);
   _uppercasesButtonTitles = YES;
   _observedNavigationItemLock = [[NSObject alloc] init];
   _titleFont = [MDCTypography titleFont];
@@ -153,6 +160,13 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
   [self addSubview:_titleLabel];
   [self addSubview:_leadingButtonBar];
   [self addSubview:_trailingButtonBar];
+
+  _mdc_overrideBaseElevation = -1;
+  [[NSNotificationCenter defaultCenter]
+      addObserver:self
+         selector:@selector(accessibilityBoldTextStatusDidChange)
+             name:UIAccessibilityBoldTextStatusDidChangeNotification
+           object:nil];
 }
 
 - (instancetype)initWithCoder:(NSCoder *)aDecoder {
@@ -360,6 +374,30 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
   return [MDCNavigationBar titleAlignmentFromTextAlignment:_titleLabel.textAlignment];
 }
 
+- (void)setTitleInsets:(UIEdgeInsets)titleInsets {
+  _titleInsets = titleInsets;
+
+  _titleInsetsAreExplicit = YES;
+}
+
+- (UIEdgeInsets)titleInsets {
+  if (_titleInsetsAreExplicit) {
+    return _titleInsets;
+  }
+  if (self.titleAlignment == MDCNavigationBarTitleAlignmentCenter) {
+    return UIEdgeInsetsMake(0, 16, 0, 16);
+  }
+  UIEdgeInsets insets = UIEdgeInsetsZero;
+  // Ensure minimum padding between the screen edge and the title content.
+  if ([_leadingButtonBar.items count] == 0) {
+    insets.left += 16;
+  }
+  if ([_trailingButtonBar.items count] == 0) {
+    insets.right += 16;
+  }
+  return insets;
+}
+
 - (void)setTitleAlignment:(MDCNavigationBarTitleAlignment)titleAlignment {
   _titleLabel.textAlignment = [MDCNavigationBar textAlignmentFromTitleAlignment:titleAlignment];
   [self setNeedsLayout];
@@ -434,6 +472,16 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
 
   } else {
     [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+  }
+}
+
+#pragma mark TraitCollection
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+  [super traitCollectionDidChange:previousTraitCollection];
+
+  if (self.traitCollectionDidChangeBlock) {
+    self.traitCollectionDidChangeBlock(self, previousTraitCollection);
   }
 }
 
@@ -535,6 +583,10 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
   return buttonItems;
 }
 
+- (void)accessibilityBoldTextStatusDidChange {
+  [self setNeedsLayout];
+}
+
 #pragma mark Colors
 
 - (void)tintColorDidChange {
@@ -563,9 +615,6 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
 }
 
 - (void)setTitleView:(UIView *)titleView {
-  if (self.titleView == titleView) {
-    return;
-  }
   // Ignore sandbag KVO events
   if ([_observedNavigationItem.titleView isKindOfClass:[MDCNavigationBarSandbagView class]]) {
     return;
@@ -580,8 +629,10 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
     _observedNavigationItem.titleView = nil;
   }
 
-  [self.titleView removeFromSuperview];
-  _titleView = titleView;
+  if (self.titleView != titleView) {
+    [self.titleView removeFromSuperview];
+    _titleView = titleView;
+  }
 
   if (_titleView != nil) {
     [self addSubview:_titleView];
@@ -670,6 +721,16 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
   return [self.trailingBarButtonItems firstObject];
 }
 
+- (CGRect)rectForLeadingBarButtonItem:(nonnull UIBarButtonItem *)item
+                    inCoordinateSpace:(nonnull id<UICoordinateSpace>)coordinateSpace {
+  return [self.leadingButtonBar rectForItem:item inCoordinateSpace:coordinateSpace];
+}
+
+- (CGRect)rectForTrailingBarButtonItem:(nonnull UIBarButtonItem *)item
+                     inCoordinateSpace:(nonnull id<UICoordinateSpace>)coordinateSpace {
+  return [self.trailingButtonBar rectForItem:item inCoordinateSpace:coordinateSpace];
+}
+
 - (void)setBackBarButtonItem:(UIBarButtonItem *)backBarButtonItem {
   self.backItem = backBarButtonItem;
 }
@@ -705,6 +766,10 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
   [self setNeedsLayout];
 }
 
+- (UIColor *)inkColor {
+  return _inkColor;
+}
+
 - (void)setInkColor:(UIColor *)inkColor {
   if (_inkColor == inkColor) {
     return;
@@ -712,6 +777,30 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
   _inkColor = inkColor;
   _leadingButtonBar.inkColor = inkColor;
   _trailingButtonBar.inkColor = inkColor;
+}
+
+- (void)setRippleColor:(UIColor *)rippleColor {
+  if (_rippleColor == rippleColor || [_rippleColor isEqual:rippleColor]) {
+    return;
+  }
+  _rippleColor = rippleColor;
+
+  _leadingButtonBar.rippleColor = rippleColor;
+  _trailingButtonBar.rippleColor = rippleColor;
+}
+
+- (void)setEnableRippleBehavior:(BOOL)enableRippleBehavior {
+  if (_enableRippleBehavior == enableRippleBehavior) {
+    return;
+  }
+  _enableRippleBehavior = enableRippleBehavior;
+
+  _leadingButtonBar.enableRippleBehavior = enableRippleBehavior;
+  _trailingButtonBar.enableRippleBehavior = enableRippleBehavior;
+}
+
+- (CGFloat)mdc_currentElevation {
+  return 0;
 }
 
 - (void)setObservedNavigationItem:(UINavigationItem *)navigationItem {
@@ -788,16 +877,6 @@ static NSArray<NSString *> *MDCNavigationBarNavigationItemKVOPaths(void) {
 
 - (void)setLeftItemsSupplementBackButton:(BOOL)leftItemsSupplementBackButton {
   self.leadingItemsSupplementBackButton = leftItemsSupplementBackButton;
-}
-
-#pragma mark deprecated
-
-- (void)setTextAlignment:(NSTextAlignment)textAlignment {
-  [self setTitleAlignment:[MDCNavigationBar titleAlignmentFromTextAlignment:textAlignment]];
-}
-
-- (NSTextAlignment)textAlignment {
-  return [MDCNavigationBar textAlignmentFromTitleAlignment:self.titleAlignment];
 }
 
 @end

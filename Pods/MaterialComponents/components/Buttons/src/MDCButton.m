@@ -14,13 +14,16 @@
 
 #import "MDCButton.h"
 
-#import <MDFTextAccessibility/MDFTextAccessibility.h>
+#import "private/MDCButton+Subclassing.h"
 #import "MaterialInk.h"
-#import "MaterialMath.h"
+#import "MaterialRipple.h"
 #import "MaterialShadowElevations.h"
 #import "MaterialShadowLayer.h"
+#import "MaterialShapeLibrary.h"
+#import "MaterialShapes.h"
 #import "MaterialTypography.h"
-#import "private/MDCButton+Subclassing.h"
+#import "MaterialMath.h"
+#import <MDFTextAccessibility/MDFTextAccessibility.h>
 
 // TODO(ajsecord): Animate title color when animating between enabled/disabled states.
 // Non-trivial: http://corecocoa.wordpress.com/2011/10/04/animatable-text-color-of-uilabel/
@@ -30,6 +33,7 @@
 static const CGFloat MDCButtonMinimumTouchTargetHeight = 48;
 static const CGFloat MDCButtonMinimumTouchTargetWidth = 48;
 static const CGFloat MDCButtonDefaultCornerRadius = 2.0;
+static const CGFloat kDefaultRippleAlpha = (CGFloat)0.12;
 
 static const NSTimeInterval MDCButtonAnimationDuration = 0.2;
 
@@ -39,6 +43,9 @@ static const CGFloat MDCButtonDisabledAlpha = (CGFloat)0.12;
 // Blue 500 from https://material.io/go/design-color-theming#color-color-palette .
 static const uint32_t MDCButtonDefaultBackgroundColor = 0x191919;
 
+// KVO contexts
+static char *const kKVOContextCornerRadius = "kKVOContextCornerRadius";
+
 // Creates a UIColor from a 24-bit RGB color encoded as an integer.
 static inline UIColor *MDCColorFromRGB(uint32_t rgbValue) {
   return [UIColor colorWithRed:((CGFloat)((rgbValue & 0xFF0000) >> 16)) / 255
@@ -47,7 +54,19 @@ static inline UIColor *MDCColorFromRGB(uint32_t rgbValue) {
                          alpha:1];
 }
 
-static NSAttributedString *uppercaseAttributedString(NSAttributedString *string) {
+// Expands size by provided edge insets.
+static inline CGSize CGSizeExpandWithInsets(CGSize size, UIEdgeInsets edgeInsets) {
+  return CGSizeMake(size.width + edgeInsets.left + edgeInsets.right,
+                    size.height + edgeInsets.top + edgeInsets.bottom);
+}
+
+// Shrinks size by provided edge insets, and also standardized.
+static inline CGSize CGSizeShrinkWithInsets(CGSize size, UIEdgeInsets edgeInsets) {
+  return CGSizeMake(MAX(0, size.width - (edgeInsets.left + edgeInsets.right)),
+                    MAX(0, size.height - (edgeInsets.top + edgeInsets.bottom)));
+}
+
+static NSAttributedString *UppercaseAttributedString(NSAttributedString *string) {
   // Store the attributes.
   NSMutableArray<NSDictionary *> *attributes = [NSMutableArray array];
   [string enumerateAttributesInRange:NSMakeRange(0, [string length])
@@ -92,13 +111,24 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
   NSString *_accessibilityLabelExplicitValue;
 
   BOOL _mdc_adjustsFontForContentSizeCategory;
+  BOOL _cornerRadiusObserverAdded;
+  CGFloat _inkMaxRippleRadius;
 }
+@property(nonatomic, strong, readonly, nonnull) MDCStatefulRippleView *rippleView;
 @property(nonatomic, strong) MDCInkView *inkView;
 @property(nonatomic, readonly, strong) MDCShapedShadowLayer *layer;
+@property(nonatomic, assign) BOOL accessibilityTraitsIncludesButton;
+@property(nonatomic, assign) BOOL enableTitleFontForState;
+@property(nonatomic, assign) UIEdgeInsets visibleAreaInsets;
+@property(nonatomic) UIEdgeInsets hitAreaInsets;
+@property(nonatomic, assign) UIEdgeInsets currentVisibleAreaInsets;
 @end
 
 @implementation MDCButton
 
+@synthesize mdc_overrideBaseElevation = _mdc_overrideBaseElevation;
+@synthesize mdc_elevationDidChangeBlock = _mdc_elevationDidChangeBlock;
+@synthesize visibleAreaInsets = _visibleAreaInsets;
 @dynamic layer;
 
 + (Class)layerClass {
@@ -142,9 +172,10 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 }
 
 - (void)commonMDCButtonInit {
+  // TODO(b/142861610): Default to `NO`, then remove once all internal usage is migrated.
+  _enableTitleFontForState = YES;
   _disabledAlpha = MDCButtonDisabledAlpha;
   _enabledAlpha = self.alpha;
-  _shouldRaiseOnTouch = YES;
   _uppercaseTitle = YES;
   _userElevations = [NSMutableDictionary dictionary];
   _nontransformedTitles = [NSMutableDictionary dictionary];
@@ -152,6 +183,9 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
   _imageTintColors = [NSMutableDictionary dictionary];
   _borderWidths = [NSMutableDictionary dictionary];
   _fonts = [NSMutableDictionary dictionary];
+  _accessibilityTraitsIncludesButton = YES;
+  _adjustsFontForContentSizeCategoryWhenScaledFontIsUnavailable = YES;
+  _mdc_overrideBaseElevation = -1;
 
   if (!_backgroundColors) {
     // _backgroundColors may have already been initialized by setting the backgroundColor setter.
@@ -161,12 +195,10 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 
   // Disable default highlight state.
   self.adjustsImageWhenHighlighted = NO;
-  self.showsTouchWhenHighlighted = NO;
 
-  // Default content insets
-  self.contentEdgeInsets = [self defaultContentEdgeInsets];
-  _minimumSize = CGSizeZero;
-  _maximumSize = CGSizeZero;
+#if (!defined(TARGET_OS_TV) || TARGET_OS_TV == 0)
+  self.showsTouchWhenHighlighted = NO;
+#endif
 
   self.layer.cornerRadius = MDCButtonDefaultCornerRadius;
   if (!self.layer.shapeGenerator) {
@@ -192,23 +224,67 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
                 action:@selector(touchDragExit:forEvent:)
       forControlEvents:UIControlEventTouchDragExit];
 
+#if (!defined(TARGET_OS_TV) || TARGET_OS_TV == 0)
   // Block users from activating multiple buttons simultaneously by default.
   self.exclusiveTouch = YES;
+#endif
 
   _inkView.inkColor = [UIColor colorWithWhite:1 alpha:(CGFloat)0.2];
+
+  _rippleView = [[MDCStatefulRippleView alloc] initWithFrame:self.bounds];
+  _rippleColor = [UIColor colorWithWhite:0 alpha:kDefaultRippleAlpha];
+  _rippleView.rippleColor = [UIColor colorWithWhite:0 alpha:(CGFloat)0.12];
+
+  // Default content insets
+  // The default contentEdgeInsets are set here (instead of above, as they were previously) because
+  // of a UIButton bug introduced in the iOS 13 betas that is unresolved as of Xcode 11 beta 4
+  // (b/136088498) wherein setting self.contentEdgeInsets before accessing self.imageView causes the
+  // imageView's bounds.origin to be set to { -(i.left + i.right), -(i.top + i.bottom) }
+  // This causes images created by using imageWithHorizontallyFlippedOrientation to not display.
+  // Images that have not been created this way seem to be fine.
+  // This behavior can also be seen in vanilla UIButtons by setting contentEdgeInsets to non-zero
+  // inset values and then setting an image created with imageWithHorizontallyFlippedOrientation.
+  self.contentEdgeInsets = [self defaultContentEdgeInsets];
+  _minimumSize = CGSizeZero;
+  _maximumSize = CGSizeZero;
 
   // Uppercase all titles
   if (_uppercaseTitle) {
     [self updateTitleCase];
   }
+
+#ifdef __IPHONE_13_4
+  if (@available(iOS 13.4, *)) {
+    if ([self respondsToSelector:@selector(pointerStyleProvider)]) {
+      __weak __typeof__(self) weakSelf = self;
+      UIButtonPointerStyleProvider buttonPointerStyleProvider = ^UIPointerStyle *(
+          UIButton *buttonToStyle, UIPointerEffect *proposedEffect, UIPointerShape *proposedShape) {
+        __typeof__(weakSelf) strongSelf = weakSelf;
+        if (!strongSelf) {
+          return [UIPointerStyle styleWithEffect:proposedEffect shape:proposedShape];
+        }
+        CGPathRef boundingCGPath = [strongSelf boundingPath].CGPath;
+        UIBezierPath *boundingBezierPath = [UIBezierPath bezierPathWithCGPath:boundingCGPath];
+        UIPointerShape *shape = [UIPointerShape shapeWithPath:boundingBezierPath];
+        return [UIPointerStyle styleWithEffect:proposedEffect shape:shape];
+      };
+      self.pointerStyleProvider = buttonPointerStyleProvider;
+      // Setting the pointerStyleProvider to a non-nil value flips pointerInteractionEnabled to YES.
+      // To maintain parity with UIButton's default behavior, we want it to default to NO.
+      self.pointerInteractionEnabled = NO;
+    }
+  }
+#endif
 }
 
 - (void)dealloc {
   [self removeTarget:self action:NULL forControlEvents:UIControlEventAllEvents];
 
-  [[NSNotificationCenter defaultCenter] removeObserver:self
-                                                  name:UIContentSizeCategoryDidChangeNotification
-                                                object:nil];
+  if (_cornerRadiusObserverAdded) {
+    [self.layer removeObserver:self
+                    forKeyPath:NSStringFromSelector(@selector(cornerRadius))
+                       context:kKVOContextCornerRadius];
+  }
 }
 
 - (void)setUnderlyingColorHint:(UIColor *)underlyingColorHint {
@@ -217,9 +293,7 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 }
 
 - (void)setAlpha:(CGFloat)alpha {
-  if (self.enabled) {
-    _enabledAlpha = alpha;
-  }
+  _enabledAlpha = alpha;
   [super setAlpha:alpha];
 }
 
@@ -232,14 +306,24 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 
 - (void)layoutSubviews {
   [super layoutSubviews];
+
+  [self updateShadowColor];
+  [self updateBackgroundColor];
+  [self updateBorderColor];
+
+  if (self.centerVisibleArea) {
+    UIEdgeInsets visibleAreaInsets = self.visibleAreaInsets;
+    if (!UIEdgeInsetsEqualToEdgeInsets(visibleAreaInsets, self.currentVisibleAreaInsets)) {
+      self.currentVisibleAreaInsets = visibleAreaInsets;
+      MDCRectangleShapeGenerator *shapeGenerator =
+          [self generateShapeWithCornerRadius:self.layer.cornerRadius
+                            visibleAreaInsets:visibleAreaInsets];
+      [self configureLayerWithShapeGenerator:shapeGenerator];
+    }
+  }
+
   if (!self.layer.shapeGenerator) {
     self.layer.shadowPath = [self boundingPath].CGPath;
-  }
-  if ([self respondsToSelector:@selector(cornerRadius)]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    self.layer.cornerRadius = [self cornerRadius];
-#pragma clang diagnostic pop
   }
 
   // Center unbounded ink view frame taking into account possible insets using contentRectForBounds.
@@ -249,12 +333,16 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
         CGPointMake(CGRectGetMidX(contentRect), CGRectGetMidY(contentRect));
     CGPoint boundsCenterPoint = CGPointMake(CGRectGetMidX(self.bounds), CGRectGetMidY(self.bounds));
 
-    CGFloat offsetX = contentCenterPoint.x - boundsCenterPoint.x;
-    CGFloat offsetY = contentCenterPoint.y - boundsCenterPoint.y;
+    CGFloat offsetX = contentCenterPoint.x - boundsCenterPoint.x + self.inkViewOffset.width;
+    CGFloat offsetY = contentCenterPoint.y - boundsCenterPoint.y + self.inkViewOffset.height;
     _inkView.frame =
         CGRectMake(offsetX, offsetY, CGRectGetWidth(self.bounds), CGRectGetHeight(self.bounds));
   } else {
-    _inkView.frame = self.bounds;
+    CGRect bounds = CGRectStandardize(self.bounds);
+    bounds = CGRectOffset(bounds, self.inkViewOffset.width, self.inkViewOffset.height);
+    bounds = UIEdgeInsetsInsetRect(bounds, self.rippleEdgeInsets);
+    _inkView.frame = bounds;
+    self.rippleView.frame = bounds;
   }
   self.titleLabel.frame = MDCRectAlignToScale(self.titleLabel.frame, [UIScreen mainScreen].scale);
 }
@@ -273,7 +361,7 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
       NSLog(
-          @"Button touch target does not meet minimum size guidlines of (%0.f, %0.f). Button: %@, "
+          @"Button touch target does not meet minimum size guidelines of (%0.f, %0.f). Button: %@, "
           @"Touch Target: %@",
           MDCButtonMinimumTouchTargetWidth, MDCButtonMinimumTouchTargetHeight, [self description],
           NSStringFromCGSize(CGSizeMake(width, height)));
@@ -285,10 +373,13 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 - (void)willMoveToSuperview:(UIView *)newSuperview {
   [super willMoveToSuperview:newSuperview];
   [self.inkView cancelAllAnimationsAnimated:NO];
+  [self.rippleView cancelAllRipplesAnimated:NO completion:nil];
 }
 
 - (CGSize)sizeThatFits:(CGSize)size {
-  CGSize superSize = [super sizeThatFits:size];
+  CGSize givenSizeWithInsets = CGSizeShrinkWithInsets(size, _visibleAreaInsets);
+  CGSize superSize = [super sizeThatFits:givenSizeWithInsets];
+
   if (self.minimumSize.height > 0) {
     superSize.height = MAX(self.minimumSize.height, superSize.height);
   }
@@ -301,35 +392,67 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
   if (self.maximumSize.width > 0) {
     superSize.width = MIN(self.maximumSize.width, superSize.width);
   }
-  return superSize;
+
+  CGSize adjustedSize = CGSizeExpandWithInsets(superSize, _visibleAreaInsets);
+  return adjustedSize;
+}
+
+- (CGSize)intrinsicContentSize {
+  return [self sizeThatFits:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)];
+}
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+  [super traitCollectionDidChange:previousTraitCollection];
+
+  if (self.traitCollectionDidChangeBlock) {
+    self.traitCollectionDidChangeBlock(self, previousTraitCollection);
+  }
 }
 
 #pragma mark - UIResponder
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event {
+  if (self.enableRippleBehavior) {
+    [self.rippleView touchesBegan:touches withEvent:event];
+  }
   [super touchesBegan:touches withEvent:event];
 
-  [self handleBeginTouches:touches];
+  if (!self.enableRippleBehavior) {
+    [self handleBeginTouches:touches];
+  }
 }
 
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event {
+  if (self.enableRippleBehavior) {
+    [self.rippleView touchesMoved:touches withEvent:event];
+  }
   [super touchesMoved:touches withEvent:event];
 
   // Drag events handled by -touchDragExit:forEvent: and -touchDragEnter:forEvent:
 }
 
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
+  if (self.enableRippleBehavior) {
+    [self.rippleView touchesEnded:touches withEvent:event];
+  }
   [super touchesEnded:touches withEvent:event];
 
-  CGPoint location = [self locationFromTouches:touches];
-  [_inkView startTouchEndedAnimationAtPoint:location completion:nil];
+  if (!self.enableRippleBehavior) {
+    CGPoint location = [self locationFromTouches:touches];
+    [_inkView startTouchEndedAnimationAtPoint:location completion:nil];
+  }
 }
 
 // Note - in some cases, event may be nil (e.g. view removed from window).
 - (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event {
+  if (self.enableRippleBehavior) {
+    [self.rippleView touchesCancelled:touches withEvent:event];
+  }
   [super touchesCancelled:touches withEvent:event];
 
-  [self evaporateInkToPoint:[self locationFromTouches:touches]];
+  if (!self.enableRippleBehavior) {
+    [self evaporateInkToPoint:[self locationFromTouches:touches]];
+  }
 }
 
 #pragma mark - UIControl methods
@@ -347,12 +470,14 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 - (void)setHighlighted:(BOOL)highlighted {
   [super setHighlighted:highlighted];
 
+  self.rippleView.rippleHighlighted = highlighted;
   [self updateAfterStateChange:NO];
 }
 
 - (void)setSelected:(BOOL)selected {
   [super setSelected:selected];
 
+  self.rippleView.selected = selected;
   [self updateAfterStateChange:NO];
 }
 
@@ -438,7 +563,7 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
   }
 
   if (_uppercaseTitle) {
-    title = uppercaseAttributedString(title);
+    title = UppercaseAttributedString(title);
   }
   [super setAttributedTitle:title forState:state];
 }
@@ -482,7 +607,10 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 }
 
 - (UIAccessibilityTraits)accessibilityTraits {
-  return [super accessibilityTraits] | UIAccessibilityTraitButton;
+  if (self.accessibilityTraitsIncludesButton) {
+    return [super accessibilityTraits] | UIAccessibilityTraitButton;
+  }
+  return [super accessibilityTraits];
 }
 
 #pragma mark - Ink
@@ -493,6 +621,14 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 
 - (void)setInkStyle:(MDCInkStyle)inkStyle {
   _inkView.inkStyle = inkStyle;
+  self.rippleView.rippleStyle =
+      (inkStyle == MDCInkStyleUnbounded) ? MDCRippleStyleUnbounded : MDCRippleStyleBounded;
+}
+
+- (void)setRippleStyle:(MDCRippleStyle)rippleStyle {
+  _rippleStyle = rippleStyle;
+
+  self.rippleView.rippleStyle = rippleStyle;
 }
 
 - (UIColor *)inkColor {
@@ -501,27 +637,65 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 
 - (void)setInkColor:(UIColor *)inkColor {
   _inkView.inkColor = inkColor;
+  [self.rippleView setRippleColor:inkColor forState:MDCRippleStateHighlighted];
+}
+
+- (void)setRippleColor:(UIColor *)rippleColor {
+  _rippleColor = rippleColor ?: [UIColor colorWithWhite:0 alpha:kDefaultRippleAlpha];
+  [self.rippleView setRippleColor:_rippleColor forState:MDCRippleStateHighlighted];
 }
 
 - (CGFloat)inkMaxRippleRadius {
-  return _inkView.maxRippleRadius;
+  return _inkMaxRippleRadius;
 }
 
 - (void)setInkMaxRippleRadius:(CGFloat)inkMaxRippleRadius {
+  _inkMaxRippleRadius = inkMaxRippleRadius;
   _inkView.maxRippleRadius = inkMaxRippleRadius;
+  self.rippleView.maximumRadius = inkMaxRippleRadius;
+}
+
+- (void)setRippleMaximumRadius:(CGFloat)rippleMaximumRadius {
+  _rippleMaximumRadius = rippleMaximumRadius;
+
+  self.rippleView.maximumRadius = rippleMaximumRadius;
+}
+
+- (void)setInkViewOffset:(CGSize)inkViewOffset {
+  _inkViewOffset = inkViewOffset;
+  [self setNeedsLayout];
+}
+
+- (void)setRippleEdgeInsets:(UIEdgeInsets)rippleEdgeInsets {
+  _rippleEdgeInsets = rippleEdgeInsets;
+
+  [self setNeedsLayout];
+}
+
+- (void)setEnableRippleBehavior:(BOOL)enableRippleBehavior {
+  _enableRippleBehavior = enableRippleBehavior;
+
+  if (enableRippleBehavior) {
+    [self.inkView removeFromSuperview];
+    [self insertSubview:self.rippleView belowSubview:self.imageView];
+  } else {
+    [self.rippleView removeFromSuperview];
+    [self insertSubview:self.inkView belowSubview:self.imageView];
+  }
 }
 
 #pragma mark - Shadows
 
 - (void)animateButtonToHeightForState:(UIControlState)state {
   CGFloat newElevation = [self elevationForState:state];
-  if (self.layer.elevation == newElevation) {
+  if (MDCCGFloatEqual(self.layer.elevation, newElevation)) {
     return;
   }
   [CATransaction begin];
   [CATransaction setAnimationDuration:MDCButtonAnimationDuration];
   self.layer.elevation = newElevation;
   [CATransaction commit];
+  [self mdc_elevationDidChange];
 }
 
 #pragma mark - BackgroundColor
@@ -604,6 +778,7 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
     return;
   }
   self.layer.elevation = newElevation;
+  [self mdc_elevationDidChange];
 
   // The elevation of the normal state controls whether this button is flat or not, and flat buttons
   // have different background color requirements than raised buttons.
@@ -616,13 +791,26 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 #pragma mark - Border Color
 
 - (UIColor *)borderColorForState:(UIControlState)state {
-  return _borderColors[@(state)];
+  if ((state & UIControlStateHighlighted) == UIControlStateHighlighted) {
+    state = state & ~UIControlStateDisabled;
+  }
+  return _borderColors[@(state)] ?: _borderColors[@(UIControlStateNormal)];
 }
 
 - (void)setBorderColor:(UIColor *)borderColor forState:(UIControlState)state {
-  _borderColors[@(state)] = borderColor;
+  UIControlState storageState = state;
+  // If the `.highlighted` flag is set, turn off the `.disabled` flag
+  if ((state & UIControlStateHighlighted) == UIControlStateHighlighted) {
+    storageState = state & ~UIControlStateDisabled;
+  }
 
-  [self updateBorderColor];
+  // Only update the backing dictionary if:
+  // 1. The `state` argument is the same as the "storage" state, OR
+  // 2. There is already a value in the "storage" state.
+  if (storageState == state || _borderColors[@(storageState)] != nil) {
+    _borderColors[@(storageState)] = borderColor;
+    [self updateBorderColor];
+  }
 }
 
 #pragma mark - Border Width
@@ -665,13 +853,52 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 #pragma mark - Title Font
 
 - (nullable UIFont *)titleFontForState:(UIControlState)state {
-  return _fonts[@(state)];
+  // If the `.highlighted` flag is set, turn off the `.disabled` flag
+  if ((state & UIControlStateHighlighted) == UIControlStateHighlighted) {
+    state = state & ~UIControlStateDisabled;
+  }
+  UIFont *font = _fonts[@(state)] ?: _fonts[@(UIControlStateNormal)];
+
+  if (!font) {
+    // TODO(#2709): Have a single source of truth for fonts
+    // Migrate to [UIFont standardFont] when possible
+    font = [MDCTypography buttonFont];
+  }
+
+  if (_mdc_adjustsFontForContentSizeCategory) {
+    // Dynamic type is enabled so apply scaling
+    if (font.mdc_scalingCurve) {
+      font = [font mdc_scaledFontForTraitEnvironment:self];
+    } else {
+      if (self.adjustsFontForContentSizeCategoryWhenScaledFontIsUnavailable) {
+        font = [font mdc_fontSizedForMaterialTextStyle:MDCFontTextStyleButton
+                                  scaledForDynamicType:YES];
+      }
+    }
+  }
+  return font;
 }
 
 - (void)setTitleFont:(nullable UIFont *)font forState:(UIControlState)state {
-  _fonts[@(state)] = font;
+  UIControlState storageState = state;
+  // If the `.highlighted` flag is set, turn off the `.disabled` flag
+  if ((state & UIControlStateHighlighted) == UIControlStateHighlighted) {
+    storageState = state & ~UIControlStateDisabled;
+  }
 
-  [self updateTitleFont];
+  // Only update the backing dictionary if:
+  // 1. The `state` argument is the same as the "storage" state, OR
+  // 2. There is already a value in the "storage" state.
+  if (storageState == state || _fonts[@(storageState)] != nil) {
+    _fonts[@(storageState)] = font;
+    [self updateTitleFont];
+  }
+}
+
+#pragma mark - MaterialElevation
+
+- (CGFloat)mdc_currentElevation {
+  return [self elevationForState:self.state];
 }
 
 #pragma mark - Private methods
@@ -725,15 +952,7 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 }
 
 - (UIBezierPath *)boundingPath {
-  CGFloat cornerRadius = self.layer.cornerRadius;
-
-  if ([self respondsToSelector:@selector(cornerRadius)]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    cornerRadius = [self cornerRadius];
-#pragma clang diagnostic pop
-  }
-  return [UIBezierPath bezierPathWithRoundedRect:self.bounds cornerRadius:cornerRadius];
+  return [UIBezierPath bezierPathWithRoundedRect:self.bounds cornerRadius:self.layer.cornerRadius];
 }
 
 - (UIEdgeInsets)defaultContentEdgeInsets {
@@ -747,7 +966,8 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 
 - (void)updateAlphaAndBackgroundColorAnimated:(BOOL)animated {
   void (^animations)(void) = ^{
-    self.alpha = self.enabled ? self->_enabledAlpha : self.disabledAlpha;
+    // Set super to avoid overwriting _enabledAlpha
+    super.alpha = self.enabled ? self->_enabledAlpha : self.disabledAlpha;
     [self updateBackgroundColor];
   };
 
@@ -800,30 +1020,27 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 }
 
 - (void)updateTitleFont {
-  // Retreive any custom font that has been set
-  UIFont *font = _fonts[@(self.state)];
-  if (!font && self.state != UIControlStateNormal) {
-    // We fall back to UIControlStateNormal if there is no value for the current state.
-    font = _fonts[@(UIControlStateNormal)];
+  if (!self.enableTitleFontForState) {
+    return;
   }
 
-  if (!font) {
-    // TODO(#2709): Have a single source of truth for fonts
-    // Migrate to [UIFont standardFont] when possible
-    font = [MDCTypography buttonFont];
-  }
-
-  if (_mdc_adjustsFontForContentSizeCategory) {
-    // Dynamic type is enabled so apply scaling
-    font = [font mdc_fontSizedForMaterialTextStyle:MDCFontTextStyleButton scaledForDynamicType:YES];
-  }
-
-  self.titleLabel.font = font;
+  self.titleLabel.font = [self titleFontForState:self.state];
 
   [self setNeedsLayout];
 }
 
 - (void)setShapeGenerator:(id<MDCShapeGenerating>)shapeGenerator {
+  if (!UIEdgeInsetsEqualToEdgeInsets(_visibleAreaInsets, UIEdgeInsetsZero) ||
+      self.centerVisibleArea) {
+    // When visibleAreaInsets or centerVisibleArea is set, custom shapeGenerater is not allow
+    // to be set through setter.
+    return;
+  }
+
+  [self configureLayerWithShapeGenerator:shapeGenerator];
+}
+
+- (void)configureLayerWithShapeGenerator:(id<MDCShapeGenerating>)shapeGenerator {
   if (shapeGenerator) {
     self.layer.shadowPath = nil;
   } else {
@@ -835,7 +1052,11 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
   // Because the inkView needs to go below the imageView, but above the colorLayer
   // we need to have the colorLayer be at the back
   [self.layer.colorLayer removeFromSuperlayer];
-  [self.layer insertSublayer:self.layer.colorLayer below:self.inkView.layer];
+  if (self.enableRippleBehavior) {
+    [self.layer insertSublayer:self.layer.colorLayer below:self.rippleView.layer];
+  } else {
+    [self.layer insertSublayer:self.layer.colorLayer below:self.inkView.layer];
+  }
   [self updateBackgroundColor];
   [self updateInkForShape];
 }
@@ -849,6 +1070,7 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
   self.inkView.maxRippleRadius =
       (CGFloat)(MDCHypot(CGRectGetHeight(boundingBox), CGRectGetWidth(boundingBox)) / 2 + 10);
   self.inkView.layer.masksToBounds = NO;
+  self.rippleView.layer.masksToBounds = NO;
 }
 
 #pragma mark - Dynamic Type
@@ -881,28 +1103,129 @@ static NSAttributedString *uppercaseAttributedString(NSAttributedString *string)
 
 #pragma mark - Deprecations
 
-- (void)setCustomTitleColor:(UIColor *)customTitleColor {
-  [self setTitleColor:customTitleColor forState:UIControlStateNormal];
-}
-
-- (UIColor *)customTitleColor {
-  return [self titleColorForState:UIControlStateNormal];
-}
-
-- (BOOL)shouldCapitalizeTitle {
-  return [self isUppercaseTitle];
-}
-
-- (void)setShouldCapitalizeTitle:(BOOL)shouldCapitalizeTitle {
-  [self setUppercaseTitle:shouldCapitalizeTitle];
-}
-
-- (UIColor *)underlyingColor {
-  return [self underlyingColorHint];
-}
-
 - (void)setUnderlyingColor:(UIColor *)underlyingColor {
   [self setUnderlyingColorHint:underlyingColor];
+}
+
+#pragma mark - Visible area
+
+- (void)setCenterVisibleArea:(BOOL)centerVisibleArea {
+  if (_centerVisibleArea == centerVisibleArea) {
+    return;
+  }
+
+  _centerVisibleArea = centerVisibleArea;
+
+  if (!centerVisibleArea && UIEdgeInsetsEqualToEdgeInsets(_visibleAreaInsets, UIEdgeInsetsZero)) {
+    self.shapeGenerator = nil;
+
+    if (_cornerRadiusObserverAdded) {
+      [self.layer removeObserver:self
+                      forKeyPath:NSStringFromSelector(@selector(cornerRadius))
+                         context:kKVOContextCornerRadius];
+      _cornerRadiusObserverAdded = NO;
+    }
+  } else {
+    MDCRectangleShapeGenerator *shapeGenerator =
+        [self generateShapeWithCornerRadius:self.layer.cornerRadius
+                          visibleAreaInsets:self.visibleAreaInsets];
+    [self configureLayerWithShapeGenerator:shapeGenerator];
+
+    if (!_cornerRadiusObserverAdded) {
+      [self.layer addObserver:self
+                   forKeyPath:NSStringFromSelector(@selector(cornerRadius))
+                      options:NSKeyValueObservingOptionNew
+                      context:kKVOContextCornerRadius];
+      _cornerRadiusObserverAdded = YES;
+    }
+  }
+}
+
+- (void)setVisibleAreaInsets:(UIEdgeInsets)visibleAreaInsets {
+  if (UIEdgeInsetsEqualToEdgeInsets(visibleAreaInsets, _visibleAreaInsets)) {
+    return;
+  }
+
+  _visibleAreaInsets = visibleAreaInsets;
+
+  if (UIEdgeInsetsEqualToEdgeInsets(visibleAreaInsets, UIEdgeInsetsZero) &&
+      !self.centerVisibleArea) {
+    self.shapeGenerator = nil;
+
+    if (_cornerRadiusObserverAdded) {
+      [self.layer removeObserver:self
+                      forKeyPath:NSStringFromSelector(@selector(cornerRadius))
+                         context:kKVOContextCornerRadius];
+      _cornerRadiusObserverAdded = NO;
+    }
+  } else {
+    MDCRectangleShapeGenerator *shapeGenerator =
+        [self generateShapeWithCornerRadius:self.layer.cornerRadius
+                          visibleAreaInsets:visibleAreaInsets];
+    [self configureLayerWithShapeGenerator:shapeGenerator];
+
+    if (!_cornerRadiusObserverAdded) {
+      [self.layer addObserver:self
+                   forKeyPath:NSStringFromSelector(@selector(cornerRadius))
+                      options:NSKeyValueObservingOptionNew
+                      context:kKVOContextCornerRadius];
+      _cornerRadiusObserverAdded = YES;
+    }
+  }
+}
+
+- (UIEdgeInsets)visibleAreaInsets {
+  if (!UIEdgeInsetsEqualToEdgeInsets(_visibleAreaInsets, UIEdgeInsetsZero)) {
+    // Use custom visibleAreaInsets value when user sets it.
+    return _visibleAreaInsets;
+  }
+
+  UIEdgeInsets visibleAreaInsets = UIEdgeInsetsZero;
+  if (self.centerVisibleArea) {
+    CGSize visibleAreaSize = [self sizeThatFits:CGSizeMake(CGFLOAT_MAX, CGFLOAT_MAX)];
+    CGFloat additionalRequiredHeight =
+        MAX(0, CGRectGetHeight(self.bounds) - visibleAreaSize.height);
+    CGFloat additionalRequiredWidth = MAX(0, CGRectGetWidth(self.bounds) - visibleAreaSize.width);
+    visibleAreaInsets.top = MDCCeil(additionalRequiredHeight * 0.5f);
+    visibleAreaInsets.bottom = additionalRequiredHeight - visibleAreaInsets.top;
+    visibleAreaInsets.left = MDCCeil(additionalRequiredWidth * 0.5f);
+    visibleAreaInsets.right = additionalRequiredWidth - visibleAreaInsets.left;
+  }
+
+  return visibleAreaInsets;
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary *)change
+                       context:(void *)context {
+  if (context == kKVOContextCornerRadius) {
+    if (!UIEdgeInsetsEqualToEdgeInsets(self.visibleAreaInsets, UIEdgeInsetsZero) &&
+        self.shapeGenerator) {
+      MDCRectangleShapeGenerator *shapeGenerator =
+          [self generateShapeWithCornerRadius:self.layer.cornerRadius
+                            visibleAreaInsets:self.visibleAreaInsets];
+      [self configureLayerWithShapeGenerator:shapeGenerator];
+    }
+  } else {
+    [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
+  }
+}
+
+- (MDCRectangleShapeGenerator *)generateShapeWithCornerRadius:(CGFloat)cornerRadius
+                                            visibleAreaInsets:(UIEdgeInsets)visibleAreaInsets {
+  MDCRectangleShapeGenerator *shapeGenerator = [[MDCRectangleShapeGenerator alloc] init];
+  MDCCornerTreatment *cornerTreatment =
+      [[MDCRoundedCornerTreatment alloc] initWithRadius:cornerRadius];
+  [shapeGenerator setCorners:cornerTreatment];
+  shapeGenerator.topLeftCornerOffset = CGPointMake(visibleAreaInsets.left, visibleAreaInsets.top);
+  shapeGenerator.topRightCornerOffset =
+      CGPointMake(-visibleAreaInsets.right, visibleAreaInsets.top);
+  shapeGenerator.bottomLeftCornerOffset =
+      CGPointMake(visibleAreaInsets.left, -visibleAreaInsets.bottom);
+  shapeGenerator.bottomRightCornerOffset =
+      CGPointMake(-visibleAreaInsets.right, -visibleAreaInsets.bottom);
+  return shapeGenerator;
 }
 
 @end

@@ -29,9 +29,9 @@ IB_DESIGNABLE
 @property (nonatomic, assign) CGFloat maxValue;
 
 /*!
- *  Limit value.
+ *  Limit values
  */
-@property (nonatomic, assign) CGFloat limitValue;
+@property (nonatomic, strong) NSArray *limitValues;
 
 /*!
  *  The number of divisions.
@@ -47,6 +47,11 @@ IB_DESIGNABLE
  *  The thickness of the ring.
  */
 @property (nonatomic, assign) IBInspectable CGFloat ringThickness;
+
+/*!
+ *  A boolean indicates whether to show ring background.
+ */
+@property (nonatomic, assign) IBInspectable BOOL showRingBackground;
 
 /*!
  *  The background color of the ring.
@@ -91,7 +96,7 @@ IB_DESIGNABLE
 /*!
  *  The color of limit dot.
  */
-@property (nonatomic, strong) IBInspectable UIColor *limitDotColor;
+@property (nonatomic, strong) NSArray *limitDotColors;
 
 /*!
  *  Font of value label.
@@ -137,6 +142,11 @@ IB_DESIGNABLE
  *  Text color of unit of measurement label.
  */
 @property (nonatomic, strong) IBInspectable UIColor *unitOfMeasurementTextColor;
+
+/*!
+ *  A boolean indicates whether to show decimal value.
+ */
+@property (nonatomic, assign) IBInspectable BOOL decimalFormat;
 
 /*!
  *  The receiver of all gauge view delegate callbacks.

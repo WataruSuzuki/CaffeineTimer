@@ -13,26 +13,18 @@
 // limitations under the License.
 
 #import <UIKit/UIKit.h>
+
 #import "MDCSnackbarAlignment.h"
+#import "MaterialElevation.h"
+#import "MaterialShadowElevations.h"
+// TODO(b/151929968): Delete import of delegate headers when client code has been migrated to no
+// longer import delegates as transitive dependencies.
+#import "MDCSnackbarManagerDelegate.h"
 
 @class MDCSnackbarMessage;
 @class MDCSnackbarMessageView;
+@protocol MDCSnackbarManagerDelegate;
 @protocol MDCSnackbarSuspensionToken;
-
-/**
- Delegate protocol for the MDCSnackbarManager.
- */
-@protocol MDCSnackbarManagerDelegate <NSObject>
-
-/**
- This method is called after the MDCSnackbarMessageView instance is initialized and right before
- The view is presented on the screen.
-
- @param messageView The messageView of the snackbar that will be presented.
- */
-- (void)willPresentSnackbarWithMessageView:(nullable MDCSnackbarMessageView *)messageView;
-
-@end
 
 /**
  Provides a means of displaying an unobtrusive message to the user.
@@ -45,7 +37,7 @@
  Snackbars prefer an application's main window is a subclass of @c MDCOverlayWindow. When a standard
  UIWindow is used an attempt is made to find the top-most view controller in the view hierarchy.
  */
-@interface MDCSnackbarManager : NSObject
+@interface MDCSnackbarManager : NSObject <MDCElevationOverriding>
 
 /**
  An instance of MDCSnackbarManager.
@@ -165,6 +157,9 @@
  */
 @property(nonatomic, strong, nullable) UIColor *snackbarMessageViewShadowColor;
 
+/** The elevation for the Snackbar message view. */
+@property(nonatomic, assign) MDCShadowElevation messageElevation;
+
 /**
  The color for the message text in the Snackbar message view.
  */
@@ -181,12 +176,34 @@
 @property(nonatomic, strong, nullable) UIFont *buttonFont;
 
 /**
+ If true, converts button titles to uppercase. Defaults to MDCButton's default (YES).
+ */
+@property(nonatomic, assign) BOOL uppercaseButtonTitle;
+
+/**
+ Alpha of disabled buttons. Defaults to the MDCButton's default (0.12).
+ */
+@property(nonatomic) CGFloat disabledButtonAlpha;
+
+/**
+ The color for the ink view in the Snackbar message view's buttons.
+ */
+@property(nonatomic, strong, nullable) UIColor *buttonInkColor;
+
+/**
  If enabled, modifications of class styling properties will be applied immediately
  to the currently presented Snackbar.
 
  Default is set to NO.
  */
 @property(nonatomic, assign) BOOL shouldApplyStyleChangesToVisibleSnackbars;
+
+/**
+ This accessibility notification posted when a Snackbar changes the focus of VoiceOver.
+
+ Default is set to UIAccessibilityLayoutChangedNotification.
+ */
+@property(nonatomic, assign) UIAccessibilityNotifications focusAccessibilityNotification;
 
 /**
  Returns the button title color for a particular control state.
@@ -220,6 +237,21 @@
     BOOL mdc_adjustsFontForContentSizeCategory;
 
 /**
+ Affects the fallback behavior for when a scaled font is not provided.
+
+ If enabled, the font size will adjust even if a scaled font has not been provided for
+ a given UIFont property on this component.
+
+ If disabled, the font size will only be adjusted if a scaled font has been provided.
+ This behavior most closely matches UIKit's.
+
+ Default value is YES.
+ */
+@property(nonatomic, assign)
+    BOOL adjustsFontForContentSizeCategoryWhenScaledFontIsUnavailable __deprecated_msg(
+        "Use UIFontMetrics and UIContentSizeCategoryAdjusting on iOS 11+ or MDCFontScaler on "
+        "earlier versions");
+/**
  If enabled, accessibilityViewIsModal will be enabled for all non-transient snackbar views by
  default. If accessibilityViewIsModal needs to be set for specific snackbar views,
  -willPresentSnackbarWithMessageView: in MDCSnackbarManagerDelegate can be used to access
@@ -234,6 +266,20 @@
  */
 @property(nonatomic, weak, nullable) id<MDCSnackbarManagerDelegate> delegate;
 
+/**
+ A block that is invoked when the manager's current snackbar's MDCSnackbarMessageView receives a
+ call to @c traitCollectionDidChange:.
+ */
+@property(nonatomic, copy, nullable) void (^traitCollectionDidChangeBlockForMessageView)
+    (MDCSnackbarMessageView *_Nonnull messageView,
+     UITraitCollection *_Nullable previousTraitCollection);
+
+/**
+ A block that is invoked when the manager's current snackbar's MDCSnackbarMessageView elevation
+ changes, and its mdc_elevationDidChangeBlock is called.
+ */
+@property(nonatomic, copy, nullable) void (^mdc_elevationDidChangeBlockForMessageView)
+    (id<MDCElevatable> _Nonnull object, CGFloat absoluteElevation);
 @end
 
 /**
@@ -246,9 +292,7 @@
 @protocol MDCSnackbarSuspensionToken <NSObject>
 @end
 
-#pragma mark - To be deprecated
-
-@interface MDCSnackbarManager (LegacyAPI)
+@interface MDCSnackbarManager (ToBeDeprecated)
 
 /**
  The @c alignment property of the @c defaultManager instance.

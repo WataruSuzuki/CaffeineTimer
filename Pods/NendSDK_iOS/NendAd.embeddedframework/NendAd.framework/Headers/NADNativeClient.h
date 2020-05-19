@@ -2,7 +2,7 @@
 //  NADNativeClient.h
 //  NendAd
 //
-//  Copyright (c) 2015年 F@N Communications, Inc. All rights reserved.
+//  Copyright (c) 2015年 FAN Communications, Inc. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>
@@ -20,7 +20,8 @@ typedef void (^NADNativeCompletionBlock)(NADNative *ad, NSError *error);
  *
  * @return A NADNativeClient object.
  */
-- (instancetype)initWithSpotId:(NSString *)spotId apiKey:(NSString *)apiKey;
+- (instancetype)initWithSpotId:(NSString *)spotId apiKey:(NSString *)apiKey __deprecated_msg("This method is deprecated. Use newer one that specified spotID parameter as NSInteger.");
+- (instancetype)initWithSpotID:(NSInteger)spotID apiKey:(NSString *)apiKey;
 
 /**
  * Load native ad.

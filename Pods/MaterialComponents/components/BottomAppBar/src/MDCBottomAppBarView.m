@@ -18,6 +18,7 @@
 
 #import <MDFInternationalization/MDFInternationalization.h>
 
+#import "MaterialMath.h"
 #import "MaterialNavigationBar.h"
 #import "private/MDCBottomAppBarAttributes.h"
 #import "private/MDCBottomAppBarLayer.h"
@@ -55,6 +56,9 @@ static const int kMDCButtonAnimationDuration = 200;
 
 @implementation MDCBottomAppBarView
 
+@synthesize mdc_overrideBaseElevation = _mdc_overrideBaseElevation;
+@synthesize mdc_elevationDidChangeBlock = _mdc_elevationDidChangeBlock;
+
 - (instancetype)initWithFrame:(CGRect)frame {
   self = [super initWithFrame:frame];
   if (self) {
@@ -83,6 +87,15 @@ static const int kMDCButtonAnimationDuration = 200;
   [self addFloatingButton];
   [self addBottomBarLayer];
   [self addNavBar];
+
+  self.barTintColor = UIColor.whiteColor;
+  self.shadowColor = UIColor.blackColor;
+  _elevation = MDCShadowElevationBottomAppBar;
+  _mdc_overrideBaseElevation = -1;
+}
+
+- (CGSize)intrinsicContentSize {
+  return CGSizeMake(UIViewNoIntrinsicMetric, kMDCBottomAppBarHeight);
 }
 
 - (void)addFloatingButton {
@@ -121,31 +134,30 @@ static const int kMDCButtonAnimationDuration = 200;
 
 - (CGPoint)getFloatingButtonCenterPositionForAppBarWidth:(CGFloat)appBarWidth {
   CGPoint floatingButtonPoint = CGPointZero;
-  CGFloat navigationBarTopEdgeYOffset = CGRectGetMinY(self.navBar.frame);
-  CGFloat midX = appBarWidth / 2;
+  CGFloat navigationBarMinY = CGRectGetMinY(self.navBar.frame);
+  floatingButtonPoint.y = MAX(0, navigationBarMinY - self.floatingButtonVerticalOffset);
 
-  floatingButtonPoint.y = MAX(0, navigationBarTopEdgeYOffset - self.floatingButtonVerticalOffset);
+  UIEdgeInsets safeAreaInsets = UIEdgeInsetsZero;
+  if (@available(iOS 11.0, *)) {
+    safeAreaInsets = self.safeAreaInsets;
+  }
+
+  CGFloat leftCenter = kMDCBottomAppBarFloatingButtonPositionX + safeAreaInsets.left;
+  CGFloat rightCenter =
+      appBarWidth - kMDCBottomAppBarFloatingButtonPositionX - safeAreaInsets.right;
+  BOOL isRTL =
+      self.mdf_effectiveUserInterfaceLayoutDirection == UIUserInterfaceLayoutDirectionRightToLeft;
   switch (self.floatingButtonPosition) {
     case MDCBottomAppBarFloatingButtonPositionLeading: {
-      if (self.mdf_effectiveUserInterfaceLayoutDirection ==
-          UIUserInterfaceLayoutDirectionLeftToRight) {
-        floatingButtonPoint.x = kMDCBottomAppBarFloatingButtonPositionX;
-      } else {
-        floatingButtonPoint.x = appBarWidth - kMDCBottomAppBarFloatingButtonPositionX;
-      }
+      floatingButtonPoint.x = isRTL ? rightCenter : leftCenter;
       break;
     }
     case MDCBottomAppBarFloatingButtonPositionCenter: {
-      floatingButtonPoint.x = midX;
+      floatingButtonPoint.x = appBarWidth / 2;
       break;
     }
     case MDCBottomAppBarFloatingButtonPositionTrailing: {
-      if (self.mdf_effectiveUserInterfaceLayoutDirection ==
-          UIUserInterfaceLayoutDirectionLeftToRight) {
-        floatingButtonPoint.x = appBarWidth - kMDCBottomAppBarFloatingButtonPositionX;
-      } else {
-        floatingButtonPoint.x = kMDCBottomAppBarFloatingButtonPositionX;
-      }
+      floatingButtonPoint.x = isRTL ? leftCenter : rightCenter;
       break;
     }
     default:
@@ -251,6 +263,9 @@ static const int kMDCButtonAnimationDuration = 200;
   self.floatingButton.center =
       [self getFloatingButtonCenterPositionForAppBarWidth:CGRectGetWidth(self.bounds)];
   [self renderPathBasedOnFloatingButtonVisibitlityAnimated:NO];
+
+  self.bottomBarLayer.fillColor = self.barTintColor.CGColor;
+  self.bottomBarLayer.shadowColor = self.shadowColor.CGColor;
 }
 
 - (UIEdgeInsets)mdc_safeAreaInsets {
@@ -295,6 +310,14 @@ static const int kMDCButtonAnimationDuration = 200;
 }
 
 #pragma mark - Setters
+
+- (void)setElevation:(MDCShadowElevation)elevation {
+  if (MDCCGFloatEqual(elevation, _elevation)) {
+    return;
+  }
+  _elevation = elevation;
+  [self mdc_elevationDidChange];
+}
 
 - (void)setFloatingButton:(MDCFloatingButton *)floatingButton {
   if (_floatingButton == floatingButton) {
@@ -384,11 +407,8 @@ static const int kMDCButtonAnimationDuration = 200;
 }
 
 - (void)setBarTintColor:(UIColor *)barTintColor {
+  _barTintColor = barTintColor;
   _bottomBarLayer.fillColor = barTintColor.CGColor;
-}
-
-- (UIColor *)barTintColor {
-  return [UIColor colorWithCGColor:_bottomBarLayer.fillColor];
 }
 
 - (void)setLeadingBarItemsTintColor:(UIColor *)leadingBarItemsTintColor {
@@ -416,11 +436,37 @@ static const int kMDCButtonAnimationDuration = 200;
 }
 
 - (void)setShadowColor:(UIColor *)shadowColor {
+  _shadowColor = shadowColor;
   _bottomBarLayer.shadowColor = shadowColor.CGColor;
 }
 
-- (UIColor *)shadowColor {
-  return [UIColor colorWithCGColor:_bottomBarLayer.shadowColor];
+- (void)setRippleColor:(UIColor *)rippleColor {
+  _rippleColor = [rippleColor copy];
+  self.navBar.rippleColor = _rippleColor;
+}
+
+- (BOOL)enableRippleBehavior {
+  return self.navBar.enableRippleBehavior;
+}
+
+- (void)setEnableRippleBehavior:(BOOL)enableRippleBehavior {
+  self.navBar.enableRippleBehavior = enableRippleBehavior;
+}
+
+#pragma mark TraitCollection
+
+- (void)traitCollectionDidChange:(UITraitCollection *)previousTraitCollection {
+  [super traitCollectionDidChange:previousTraitCollection];
+
+  if (self.traitCollectionDidChangeBlock) {
+    self.traitCollectionDidChangeBlock(self, previousTraitCollection);
+  }
+}
+
+#pragma mark - MDCElevation
+
+- (CGFloat)mdc_currentElevation {
+  return self.elevation;
 }
 
 @end

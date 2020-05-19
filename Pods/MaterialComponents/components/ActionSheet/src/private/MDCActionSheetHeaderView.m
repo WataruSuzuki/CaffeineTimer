@@ -20,11 +20,13 @@
 static const CGFloat kTitleLabelAlpha = (CGFloat)0.87;
 static const CGFloat kMessageLabelAlpha = (CGFloat)0.6;
 static const CGFloat kMessageOnlyPadding = 23;
-static const CGFloat kLeadingPadding = 16;
+static const CGFloat kLeadingPadding = 0;
 static const CGFloat kTopStandardPadding = 16;
-static const CGFloat kTrailingPadding = 16;
+static const CGFloat kTrailingPadding = 0;
 static const CGFloat kTitleOnlyPadding = 18;
 static const CGFloat kMiddlePadding = 8;
+/** The minimum height a header can be. */
+static const CGFloat kMinimumHeaderHeight = 8;
 
 @interface MDCActionSheetHeaderView ()
 @property(nonatomic, strong) UILabel *titleLabel;
@@ -38,12 +40,14 @@ static const CGFloat kMiddlePadding = 8;
 - (instancetype)initWithFrame:(CGRect)frame {
   self = [super initWithFrame:frame];
   if (self) {
+    self.preservesSuperviewLayoutMargins = YES;
     _titleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     _messageLabel = [[UILabel alloc] initWithFrame:CGRectZero];
     [self addSubview:_titleLabel];
     _titleLabel.font = [UIFont mdc_standardFontForMaterialTextStyle:MDCFontTextStyleSubheadline];
     _titleLabel.numberOfLines = 0;
     _titleLabel.lineBreakMode = NSLineBreakByTruncatingMiddle;
+    _titleLabel.accessibilityTraits |= UIAccessibilityTraitHeader;
 
     [self addSubview:_messageLabel];
     _messageLabel.font = [UIFont mdc_standardFontForMaterialTextStyle:MDCFontTextStyleBody1];
@@ -54,16 +58,12 @@ static const CGFloat kMiddlePadding = 8;
   return self;
 }
 
-- (void)dealloc {
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-}
-
 - (void)layoutSubviews {
   [super layoutSubviews];
 
   CGSize size = CGRectInfinite.size;
   size.width = CGRectGetWidth(self.bounds);
-  CGRect labelFrame = [self frameWithSafeAreaInsets:self.bounds];
+  CGRect labelFrame = [self frameWithLayoutMargins:self.bounds];
   labelFrame = CGRectStandardize(labelFrame);
   labelFrame.size.width = labelFrame.size.width - kLeadingPadding - kTrailingPadding;
   CGSize titleSize = [self.titleLabel sizeThatFits:labelFrame.size];
@@ -92,7 +92,7 @@ static const CGFloat kMiddlePadding = 8;
   } else if (titleExist) {
     contentHeight = titleSize.height + (kTitleOnlyPadding * 2);
   } else {
-    contentHeight = 0;
+    contentHeight = kMinimumHeaderHeight;
   }
   CGSize contentSize;
   contentSize.width = MDCCeil(size.width);
@@ -100,13 +100,8 @@ static const CGFloat kMiddlePadding = 8;
   return contentSize;
 }
 
-- (CGRect)frameWithSafeAreaInsets:(CGRect)frame {
-  UIEdgeInsets safeAreaInsets = UIEdgeInsetsZero;
-  if (@available(iOS 11.0, *)) {
-    safeAreaInsets = self.safeAreaInsets;
-    safeAreaInsets.top = 0;
-  }
-  return UIEdgeInsetsInsetRect(frame, safeAreaInsets);
+- (CGRect)frameWithLayoutMargins:(CGRect)frame {
+  return UIEdgeInsetsInsetRect(frame, self.layoutMargins);
 }
 
 - (void)setTitle:(NSString *)title {

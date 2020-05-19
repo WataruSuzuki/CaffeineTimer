@@ -14,6 +14,8 @@
 
 #import "MDCDraggableView.h"
 
+#import "MDCDraggableViewDelegate.h"
+
 static void CancelGestureRecognizer(UIGestureRecognizer *gesture) {
   if (gesture.enabled) {
     // Setting enabled to NO while a gesture recognizer is currently recognizing a gesture will
@@ -54,7 +56,7 @@ static void CancelGestureRecognizer(UIGestureRecognizer *gesture) {
   // translation. This gives the same effect as when you overscroll a scrollview.
   CGFloat newHeight = CGRectGetMaxY(self.superview.bounds) - CGRectGetMinY(self.frame);
   if (newHeight > [self.delegate maximumHeightForDraggableView:self]) {
-    point.y -= point.y / 1.2;
+    point.y -= point.y / (CGFloat)1.2;
   }
 
   self.center = CGPointMake(self.center.x, self.center.y + point.y);
@@ -67,6 +69,10 @@ static void CancelGestureRecognizer(UIGestureRecognizer *gesture) {
     [self.delegate draggableViewBeganDragging:self];
   } else if (recognizer.state == UIGestureRecognizerStateEnded) {
     [self.delegate draggableView:self draggingEndedWithVelocity:velocity];
+  }
+  if (recognizer.state == UIGestureRecognizerStateBegan ||
+      recognizer.state == UIGestureRecognizerStateChanged) {
+    [self.delegate draggableView:self didPanToOffset:CGRectGetMinY(self.frame)];
   }
 }
 
@@ -100,6 +106,15 @@ static void CancelGestureRecognizer(UIGestureRecognizer *gesture) {
     return YES;
   }
   return NO;
+}
+
+// Disable pan gesture on UIControl
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
+       shouldReceiveTouch:(UITouch *)touch {
+  if ([touch.view isKindOfClass:[UIControl class]]) {
+    return NO;
+  }
+  return YES;
 }
 
 @end
