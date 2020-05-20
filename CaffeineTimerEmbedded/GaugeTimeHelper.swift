@@ -8,14 +8,14 @@
 
 import UIKit
 
-public protocol GaugeTimerUtilDelegate: class {
+public protocol GaugeTimeHelperDelegate: class {
     func updateTimerRemain()
 }
 
-public class GaugeTimerUtilities: NSObject {
+public class GaugeTimeHelper: NSObject {
     
-    public static var sharedInstance: GaugeTimerUtilities = {
-        return GaugeTimerUtilities()
+    public static var sharedInstance: GaugeTimeHelper = {
+        return GaugeTimeHelper()
     }()
     private override init() {}
     
@@ -30,8 +30,7 @@ public class GaugeTimerUtilities: NSObject {
     public var timeLefts: Int = 0
     public var nextFillTime: Int = 0
     
-    weak public var delegateVC: GaugeTimerUtilDelegate?
-    weak public var delegateWidget: GaugeTimerUtilDelegate?
+    public var delegates = [String: GaugeTimeHelperDelegate]()
     
     public func loadRemainGauge() {
         if let timeUpDate: Date = UserDefaults(suiteName: "group.jp.co.JchanKchan.CaffeineTimer")!.object(forKey: "TimeUp") as? Date {
@@ -56,7 +55,7 @@ public class GaugeTimerUtilities: NSObject {
             let delay = TIME_DELAY_1SECOND * Double(NSEC_PER_SEC)
             let time = DispatchTime.now() + Double(Int64(delay)) / Double(NSEC_PER_SEC)
             DispatchQueue.main.asyncAfter(deadline: time, execute: {
-                self.updateTimer = Timer.scheduledTimer(timeInterval: self.timeDelta, target: self, selector: #selector(GaugeTimerUtilities.calculateRemainValues), userInfo: nil, repeats: true)
+                self.updateTimer = Timer.scheduledTimer(timeInterval: self.timeDelta, target: self, selector: #selector(GaugeTimeHelper.calculateRemainValues), userInfo: nil, repeats: true)
             })
         }
     }
@@ -66,8 +65,7 @@ public class GaugeTimerUtilities: NSObject {
             self.updateTimer.invalidate()
             self.updateTimer = nil
         }
-        delegateVC = nil
-        delegateWidget = nil
+        delegates.removeAll()
     }
     
     public func fuelCaffeineGaugeTimer(_ sender: AnyObject, senderSelector:Selector) {
@@ -120,8 +118,7 @@ public class GaugeTimerUtilities: NSObject {
         
         //print("velocity = \(velocity)")
         //print("timeLefts = \(timeLefts)")
-        self.delegateVC?.updateTimerRemain()
-        self.delegateWidget?.updateTimerRemain()
+        delegates.forEach({ $0.value.updateTimerRemain() })
     }
     
     public enum GaugeDispType : Int {

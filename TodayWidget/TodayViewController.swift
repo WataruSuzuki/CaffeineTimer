@@ -11,22 +11,26 @@ import NotificationCenter
 import CaffeineTimerEmbedded
 
 class TodayViewController: UIViewController,
-    GaugeTimerUtilDelegate,
+    GaugeTimeHelperDelegate,
     NCWidgetProviding
 {
         
     @IBOutlet weak var segmentedControlForGauge: UISegmentedControl!
     @IBOutlet weak var labelRemainValue: UILabel!
     
-    let myGaugeTimerUtilities = GaugeTimerUtilities.sharedInstance
+    private let helper = GaugeTimeHelper.sharedInstance
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view from its nib.
         
-        updateGaugeTimerUtilDelegate()
-        segmentedControlForGauge.setTitle(GaugeTimerUtilities.GaugeDispType.caffeine.getGaugeDispTypeTitle(), forSegmentAt: GaugeTimerUtilities.GaugeDispType.caffeine.rawValue)
-        segmentedControlForGauge.setTitle(GaugeTimerUtilities.GaugeDispType.time.getGaugeDispTypeTitle(), forSegmentAt: GaugeTimerUtilities.GaugeDispType.time.rawValue)
+        updateGaugeTimeHelperDelegate()
+        segmentedControlForGauge.setTitle(
+            GaugeTimeHelper.GaugeDispType.caffeine.getGaugeDispTypeTitle(),
+            forSegmentAt: GaugeTimeHelper.GaugeDispType.caffeine.rawValue)
+        segmentedControlForGauge.setTitle(
+            GaugeTimeHelper.GaugeDispType.time.getGaugeDispTypeTitle(),
+            forSegmentAt: GaugeTimeHelper.GaugeDispType.time.rawValue)
         
         self.labelRemainValue.text = ""
     }
@@ -36,14 +40,14 @@ class TodayViewController: UIViewController,
         
         updateGaugeDispType()
         //updateTimerCaffeineGauge()
-        myGaugeTimerUtilities.startCountTimerCaffeineGauge()
-        myGaugeTimerUtilities.loadRemainGauge()
+        helper.startCountTimerCaffeineGauge()
+        helper.loadRemainGauge()
     }
     
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         
-        myGaugeTimerUtilities.stopCountTimerCaffeineGauge()
+        helper.stopCountTimerCaffeineGauge()
     }
     
     override func didReceiveMemoryWarning() {
@@ -65,44 +69,46 @@ class TodayViewController: UIViewController,
         return UIEdgeInsets.zero
     }
     
-    func updateTimerCaffeineGauge() {
+    private func updateTimerCaffeineGauge() {
         //print(#function)
         //myGaugeTimerUtilities.calculateRemainValues(Float(CaffeineValue.MIN_CAFFEINE_DAY))
         
         // Set value for gauge view
-        if GaugeTimerUtilities.GaugeDispType.caffeine.rawValue == segmentedControlForGauge.selectedSegmentIndex {
+        if GaugeTimeHelper.GaugeDispType.caffeine.rawValue != segmentedControlForGauge.selectedSegmentIndex {
+            self.labelRemainValue.text = helper.getTimeLeftsValue()
+        } else {
             if #available(iOS 10.0, *) {
                 let attrUnitText = NSMutableAttributedString(string: " mg")
                 attrUnitText.addAttributes([NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 27)], range: NSMakeRange(0, attrUnitText.length))
 
-                let valueAttrText = NSMutableAttributedString(string: String(Int(myGaugeTimerUtilities.velocity)))
+                let valueAttrText = NSMutableAttributedString(string: String(Int(helper.velocity)))
                 valueAttrText.addAttributes([NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: self.labelRemainValue.font.pointSize)], range: NSMakeRange(0, valueAttrText.length))
                 
                 valueAttrText.append(attrUnitText)
                 self.labelRemainValue.attributedText = valueAttrText
             } else {
-                self.labelRemainValue.text = String(Int(myGaugeTimerUtilities.velocity)) + " mg"
+                self.labelRemainValue.text = String(Int(helper.velocity)) + " mg"
             }
-        } else {
-            self.labelRemainValue.text = myGaugeTimerUtilities.getTimeLeftsValue()
         }
 //        print(self.labelRemainValue.text!)
     }
     
-    func updateGaugeTimerUtilDelegate() {
-        if nil == myGaugeTimerUtilities.delegateWidget {
-            myGaugeTimerUtilities.delegateWidget = self
+    private func updateGaugeTimeHelperDelegate() {
+        guard helper.delegates["TodayWidget"] == nil else {
+            return
         }
+        helper.delegates["TodayWidget"] = self
     }
     
-    func updateGaugeDispType() {
-        guard let selectedIndex = UserDefaults(suiteName: "group.jp.co.JchanKchan.CaffeineTimer")!.object(forKey: "GaugeType") as? Int else{
+    private func updateGaugeDispType() {
+        guard let ud = UserDefaults(suiteName: "group.jp.co.JchanKchan.CaffeineTimer"),
+              let selectedIndex = ud.object(forKey: "GaugeType") as? Int else {
             return
         }
         segmentedControlForGauge.selectedSegmentIndex = selectedIndex
     }
     
-    // MARK: - GaugeTimerUtilDelegate
+    // MARK: - GaugeTimeHelperDelegate
     func updateTimerRemain() {
         updateTimerCaffeineGauge()
     }

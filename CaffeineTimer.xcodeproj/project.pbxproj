@@ -23,7 +23,7 @@
 		60F4C8481C96DADA008E8DBE /* CaffeineTimerEmbeddedTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F4C8471C96DADA008E8DBE /* CaffeineTimerEmbeddedTests.swift */; };
 		60F4C84C1C96DADA008E8DBE /* CaffeineTimerEmbedded.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 60F4C8371C96DAD9008E8DBE /* CaffeineTimerEmbedded.framework */; };
 		60F4C84D1C96DADA008E8DBE /* CaffeineTimerEmbedded.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 60F4C8371C96DAD9008E8DBE /* CaffeineTimerEmbedded.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		60F4C8571C96DE23008E8DBE /* GaugeTimerUtilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F4C8561C96DE23008E8DBE /* GaugeTimerUtilities.swift */; };
+		60F4C8571C96DE23008E8DBE /* GaugeTimeHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60F4C8561C96DE23008E8DBE /* GaugeTimeHelper.swift */; };
 		67B1064DA0A6F884AC1D698A /* Pods_CaffeineTimerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE25DF74C373266AE439C421 /* Pods_CaffeineTimerTests.framework */; };
 		854EF9916A4EA3B2C58FF3A7 /* Pods_CaffeineTimer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3303E774AA99FE588FB0E740 /* Pods_CaffeineTimer.framework */; };
 		961767CE1C81FD0600AEB4D0 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 961767CD1C81FD0600AEB4D0 /* Settings.bundle */; };
@@ -176,7 +176,7 @@
 		60F4C8401C96DADA008E8DBE /* CaffeineTimerEmbeddedTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CaffeineTimerEmbeddedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		60F4C8471C96DADA008E8DBE /* CaffeineTimerEmbeddedTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaffeineTimerEmbeddedTests.swift; sourceTree = "<group>"; };
 		60F4C8491C96DADA008E8DBE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		60F4C8561C96DE23008E8DBE /* GaugeTimerUtilities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GaugeTimerUtilities.swift; sourceTree = "<group>"; };
+		60F4C8561C96DE23008E8DBE /* GaugeTimeHelper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GaugeTimeHelper.swift; sourceTree = "<group>"; };
 		6394ECCE8415C73C7D8DFF63 /* Pods-CaffeineTimerTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CaffeineTimerTests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-CaffeineTimerTests/Pods-CaffeineTimerTests.debug.xcconfig"; sourceTree = "<group>"; };
 		7D788393BEF5E8D9740FDFCC /* Pods-CaffeineTimerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CaffeineTimerTests.release.xcconfig"; path = "Pods/Target Support Files/Pods-CaffeineTimerTests/Pods-CaffeineTimerTests.release.xcconfig"; sourceTree = "<group>"; };
 		8FE00CF5D8DF29151DBE20C3 /* Pods-CaffeineTimer.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-CaffeineTimer.debug.xcconfig"; path = "Pods/Target Support Files/Pods-CaffeineTimer/Pods-CaffeineTimer.debug.xcconfig"; sourceTree = "<group>"; };
@@ -362,7 +362,7 @@
 				605AB59F1C981E10005B754A /* ConstCaffeineValue.swift */,
 				60F4C8391C96DADA008E8DBE /* CaffeineTimerEmbedded.h */,
 				60F4C83B1C96DADA008E8DBE /* Info.plist */,
-				60F4C8561C96DE23008E8DBE /* GaugeTimerUtilities.swift */,
+				60F4C8561C96DE23008E8DBE /* GaugeTimeHelper.swift */,
 				60AA24641C993C1900D67FA4 /* HealthKitUtils.swift */,
 			);
 			path = CaffeineTimerEmbedded;
@@ -1004,7 +1004,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				605AB5A01C981E10005B754A /* ConstCaffeineValue.swift in Sources */,
-				60F4C8571C96DE23008E8DBE /* GaugeTimerUtilities.swift in Sources */,
+				60F4C8571C96DE23008E8DBE /* GaugeTimeHelper.swift in Sources */,
 				60AA24651C993C1900D67FA4 /* HealthKitUtils.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -15,7 +15,7 @@ import MaterialComponents.MaterialFeatureHighlight
 import DJKPurchaseService
 
 class MyTopViewController: HelpingMonetizeViewController,
-    GaugeTimerUtilDelegate,
+    GaugeTimeHelperDelegate,
     LMGaugeViewDelegate
 {
     @IBOutlet weak var caffeineGaugeView: LMGaugeView!
@@ -23,7 +23,7 @@ class MyTopViewController: HelpingMonetizeViewController,
     @IBOutlet weak var segmentedControlForGauge: UISegmentedControl!
     @IBOutlet weak var labelTimeLeft: UILabel!
     
-    let myGaugeTimerUtilities = GaugeTimerUtilities.sharedInstance
+    private let helper = GaugeTimeHelper.sharedInstance
     //let myHealthKitUtils = HealthKitUtils.sharedInstance
     private var shownTutorial = false
 
@@ -31,12 +31,12 @@ class MyTopViewController: HelpingMonetizeViewController,
         super.viewDidLoad()
         
         // Configure gauge view
-        updateGaugeTimerUtilDelegate()
+        addHelperDelegate()
         initGaugeView()
 
         updateTimerCaffeineGauge()
-        myGaugeTimerUtilities.startCountTimerCaffeineGauge()
-        myGaugeTimerUtilities.loadRemainGauge()
+        helper.startCountTimerCaffeineGauge()
+        helper.loadRemainGauge()
         
         NotificationCenter.default.addObserver(self, selector: #selector(MyTopViewController.appWillEnterForeground(_:)), name: UIApplication.willEnterForegroundNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(MyTopViewController.appDidBecomeActive(_:)), name: UIApplication.didBecomeActiveNotification, object: nil)
@@ -67,18 +67,12 @@ class MyTopViewController: HelpingMonetizeViewController,
         )
     }
     
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        //executeShortcutFuelGauge()
-    }
-    
-    func executeShortcutFuelGauge() {
+    private func executeShortcutFuelGauge() {
         if let delegate = UIApplication.shared.delegate as? AppDelegate {
             if #available(iOS 9.0, *) {
                 if AppDelegate.ShortcutIdentifier.First.type == delegate.launchedShortcutItem?.type {
                     delegate.launchedShortcutItem = nil
-                    myGaugeTimerUtilities.fuelCaffeineGaugeTimer(self, senderSelector: #selector(MyTopViewController.fuelGaugeTimer))
+                    helper.fuelCaffeineGaugeTimer(self, senderSelector: #selector(MyTopViewController.fuelGaugeTimer))
                 }
             }
         }
@@ -92,15 +86,15 @@ class MyTopViewController: HelpingMonetizeViewController,
         return getMyGreenColor()
     }
     
-    func getMyRedColor()->UIColor {
+    private func getMyRedColor() -> UIColor {
         return UIColor(red: 255.0/255, green: 59.0/255, blue: 48.0/255, alpha: 1.0)
     }
     
-    func getMyGreenColor()->UIColor {
+    private func getMyGreenColor() -> UIColor {
         return UIColor(red: 11.0/255, green: 150.0/255, blue: 246.0/255, alpha: 1.0)
     }
     
-    func setupTutorialPopLabel() {
+    private func setupTutorialPopLabel() {
         let highlightController = MDCFeatureHighlightViewController(highlightedView: buttonAddCaffeine) { (result) in
             
         }
@@ -115,7 +109,7 @@ class MyTopViewController: HelpingMonetizeViewController,
         }
     }
     
-    func initGaugeView() {
+    private func initGaugeView() {
         self.caffeineGaugeView.minValue = CGFloat(CaffeineValue.MIN_CAFFEINE_DAY)
         self.caffeineGaugeView.maxValue = CGFloat(CaffeineValue.MAX_CAFFEINE_DAY)
         self.caffeineGaugeView.limitValues = [CGFloat(CaffeineValue.CAFFEINE_PER_DRINK * 2)]
@@ -127,61 +121,61 @@ class MyTopViewController: HelpingMonetizeViewController,
         
         labelTimeLeft.isHidden = true
         caffeineGaugeView.valueTextColor = UIColor.black
-        segmentedControlForGauge.setTitle(GaugeTimerUtilities.GaugeDispType.caffeine.getGaugeDispTypeTitle(), forSegmentAt: GaugeTimerUtilities.GaugeDispType.caffeine.rawValue)
-        segmentedControlForGauge.setTitle(GaugeTimerUtilities.GaugeDispType.time.getGaugeDispTypeTitle(), forSegmentAt: GaugeTimerUtilities.GaugeDispType.time.rawValue)
-        self.caffeineGaugeView.unitOfMeasurement = GaugeTimerUtilities.GaugeDispType.time.getGaugeDispTypeUnit()
+        segmentedControlForGauge.setTitle(GaugeTimeHelper.GaugeDispType.caffeine.getGaugeDispTypeTitle(), forSegmentAt: GaugeTimeHelper.GaugeDispType.caffeine.rawValue)
+        segmentedControlForGauge.setTitle(GaugeTimeHelper.GaugeDispType.time.getGaugeDispTypeTitle(), forSegmentAt: GaugeTimeHelper.GaugeDispType.time.rawValue)
+        self.caffeineGaugeView.unitOfMeasurement = GaugeTimeHelper.GaugeDispType.time.getGaugeDispTypeUnit()
         
         updateGaugeDispType()
     }
     
-    func updateGaugeDispType() {
-        guard let selectedIndex = UserDefaults(suiteName: "group.jp.co.JchanKchan.CaffeineTimer")!.object(forKey: "GaugeType") as? Int else{
+    private func updateGaugeDispType() {
+        guard let ud = UserDefaults(suiteName: "group.jp.co.JchanKchan.CaffeineTimer"),
+              let selectedIndex = ud.object(forKey: "GaugeType") as? Int else {
             return
         }
         segmentedControlForGauge.selectedSegmentIndex = selectedIndex
-        if GaugeTimerUtilities.GaugeDispType.time.rawValue == selectedIndex {
+        if GaugeTimeHelper.GaugeDispType.time.rawValue == selectedIndex {
             labelTimeLeft.isHidden = false
             caffeineGaugeView.valueTextColor = caffeineGaugeView.backgroundColor
         } else {
             labelTimeLeft.isHidden = true
             caffeineGaugeView.valueTextColor = UIColor.black
         }
-        let selectedType = GaugeTimerUtilities.GaugeDispType(rawValue: segmentedControlForGauge.selectedSegmentIndex)
+        let selectedType = GaugeTimeHelper.GaugeDispType(rawValue: segmentedControlForGauge.selectedSegmentIndex)
         self.caffeineGaugeView.unitOfMeasurement = selectedType!.getGaugeDispTypeUnit()
     }
     
-    // MARK: - GaugeTimerUtilDelegate
+    // MARK: - GaugeTimeHelperDelegate
     func updateTimerRemain() {
         updateTimerCaffeineGauge()
     }
     
-    func updateTimerCaffeineGauge() {
-        //myGaugeTimerUtilities.calculateRemainValues(Float(self.caffeineGaugeView.minValue))
-        
+    private func updateTimerCaffeineGauge() {
         // Set value for gauge view
-        self.caffeineGaugeView.value = CGFloat(myGaugeTimerUtilities.velocity)
-        self.labelTimeLeft.text = myGaugeTimerUtilities.getTimeLeftsValue()
+        self.caffeineGaugeView.value = CGFloat(helper.velocity)
+        self.labelTimeLeft.text = helper.getTimeLeftsValue()
     }
     
-    func updateGaugeTimerUtilDelegate() {
-        if nil == myGaugeTimerUtilities.delegateVC {
-            myGaugeTimerUtilities.delegateVC = self
+    private func addHelperDelegate() {
+        guard helper.delegates["MyTopView"] == nil else {
+            return
         }
+        helper.delegates["MyTopView"] = self
     }
     
     @objc func fuelGaugeTimer() {
         // Calculate velocity
-        myGaugeTimerUtilities.velocity += Float(CaffeineValue.CAFFEINE_PER_DRINK) / 60
+        helper.velocity += Float(CaffeineValue.CAFFEINE_PER_DRINK) / 60
         self.labelTimeLeft.isHidden = true
         caffeineGaugeView.valueTextColor = UIColor.black
-        self.caffeineGaugeView.unitOfMeasurement = GaugeTimerUtilities.GaugeDispType.caffeine.getGaugeDispTypeUnit()
+        self.caffeineGaugeView.unitOfMeasurement = GaugeTimeHelper.GaugeDispType.caffeine.getGaugeDispTypeUnit()
         
-        if myGaugeTimerUtilities.isFueledToNextValue() {
+        if helper.isFueledToNextValue() {
             
             removeOldFuelNotification()
-            updateGaugeTimerUtilDelegate()
-            myGaugeTimerUtilities.startCountTimerCaffeineGauge()
-            myGaugeTimerUtilities.saveNextFillTime()
+            addHelperDelegate()
+            helper.startCountTimerCaffeineGauge()
+            helper.saveNextFillTime()
             setLocalNotification(NSLocalizedString("digestion_caffeine", comment: ""), notification_id: 1)
             HealthKitUtils.saveCaffeine()
             updateGaugeDispType()
@@ -191,10 +185,10 @@ class MyTopViewController: HelpingMonetizeViewController,
         }
         
         // Set value for gauge view
-        self.caffeineGaugeView.value = CGFloat(myGaugeTimerUtilities.velocity)
+        self.caffeineGaugeView.value = CGFloat(helper.velocity)
     }
     
-    func removeOldFuelNotification() {
+    private func removeOldFuelNotification() {
         if #available(iOS 10.0, *) {
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         } else {
@@ -204,13 +198,13 @@ class MyTopViewController: HelpingMonetizeViewController,
         }
     }
     
-    func setLocalNotification(_ alertBody: String, notification_id: Int) {
+    private func setLocalNotification(_ alertBody: String, notification_id: Int) {
         if #available(iOS 10.0, *) {
             let content = UNMutableNotificationContent()
             content.title = "Caffeine Timer"
             content.body = alertBody
             
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(myGaugeTimerUtilities.nextFillTime), repeats: false)
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: TimeInterval(helper.nextFillTime), repeats: false)
             let requestIdentifier = "digestion_caffeine"
             
             let request = UNNotificationRequest(identifier: requestIdentifier, content: content, trigger: trigger)
@@ -224,7 +218,7 @@ class MyTopViewController: HelpingMonetizeViewController,
             let notification:UILocalNotification = UILocalNotification()
             //notification.alertTitle = "タイトル"
             notification.alertBody = alertBody
-            notification.fireDate = Date(timeIntervalSinceNow: TimeInterval(myGaugeTimerUtilities.nextFillTime))
+            notification.fireDate = Date(timeIntervalSinceNow: TimeInterval(helper.nextFillTime))
             notification.userInfo = ["notification_id": notification_id]
             
             UIApplication.shared.scheduleLocalNotification(notification)
@@ -232,7 +226,7 @@ class MyTopViewController: HelpingMonetizeViewController,
     }
     
     @objc func appWillEnterForeground(_ notification: Notification) {
-        myGaugeTimerUtilities.loadRemainGauge()
+        helper.loadRemainGauge()
         refreshAllAd()
         updateTimerCaffeineGauge()
     }
@@ -249,7 +243,7 @@ class MyTopViewController: HelpingMonetizeViewController,
     // MARK: - Action
     @IBAction func tapCoffeeButton(_ sender: AnyObject) {
         shownTutorial = true
-        myGaugeTimerUtilities.fuelCaffeineGaugeTimer(self, senderSelector: #selector(MyTopViewController.fuelGaugeTimer))
+        helper.fuelCaffeineGaugeTimer(self, senderSelector: #selector(MyTopViewController.fuelGaugeTimer))
     }
     
     @IBAction func changeSegmentGauge(_ sender: AnyObject) {
