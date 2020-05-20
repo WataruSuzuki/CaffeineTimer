@@ -34,9 +34,4 @@ platform :ios do
         configuration: 'Debug'
     )
     end
-    desc "Push a new beta build to TestFlight"
-    lane :beta do
-        build_app(workspace: "CaffeineTimer.xcworkspace", scheme: "CaffeineTimer")
-        upload_to_testflight
-    end
 end
