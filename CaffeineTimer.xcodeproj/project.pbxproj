@@ -617,7 +617,6 @@
 				60B29AA31C9A54B800DDACBD /* Sources */,
 				60B29AA41C9A54B800DDACBD /* Frameworks */,
 				60B29AA51C9A54B800DDACBD /* Resources */,
-				60B29AB71C9A6A3200DDACBD /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -674,7 +673,6 @@
 				F066B7981C4C7BC20063AFB2 /* Frameworks */,
 				F066B7991C4C7BC20063AFB2 /* Resources */,
 				FA70551F99A7AE47F259EB4E /* [CP] Copy Pods Resources */,
-				602018461C4CB46B00FC56BF /* ShellScript */,
 				60F4C8311C96D225008E8DBE /* Embed App Extensions */,
 				60F4C8511C96DADB008E8DBE /* Embed Frameworks */,
 				6F23BA2EDA94B70251B42AA8 /* [CP] Embed Pods Frameworks */,
@@ -861,32 +859,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		602018461C4CB46B00FC56BF /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "#!/bin/bash\nAPP_VERSION=$(/usr/libexec/PlistBuddy -c \"Print CFBundleShortVersionString\" $PRODUCT_SETTINGS_PATH)\n/usr/libexec/PlistBuddy -c \"Set :PreferenceSpecifiers:1:DefaultValue ${APP_VERSION}\" \"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/Settings.bundle/Root.plist\"\n\nAPP_BUILD_NO=$(/usr/libexec/PlistBuddy -c \"Print CFBundleVersion\" $PRODUCT_SETTINGS_PATH)\n/usr/libexec/PlistBuddy -c \"Set :PreferenceSpecifiers:2:DefaultValue ${APP_BUILD_NO}\" \"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/Settings.bundle/Root.plist\"\n\nif [ \"${CONFIGURATION}\" = \"Release\" ]; then\nbuildNumber=$(/usr/libexec/PlistBuddy -c \"Print CFBundleVersion\" \"$INFOPLIST_FILE\")\nbuildNumber=$(($buildNumber + 1))\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $buildNumber\" \"$INFOPLIST_FILE\"\nfi";
-		};
-		60B29AB71C9A6A3200DDACBD /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ \"${CONFIGURATION}\" = \"Release\" ]; then\nbuildNumber=$(/usr/libexec/PlistBuddy -c \"Print CFBundleVersion\" \"$INFOPLIST_FILE\")\nbuildNumber=$(($buildNumber + 1))\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $buildNumber\" \"$INFOPLIST_FILE\"\nfi";
-		};
 		6F23BA2EDA94B70251B42AA8 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
