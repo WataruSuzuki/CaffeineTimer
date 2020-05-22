@@ -244,8 +244,8 @@ class MyTopViewController: HelpingMonetizeViewController,
     }
     
     private func refreshAllAd() {
-        loadAdMobInterstitial(unitId: "ca-app-pub-3940256099942544/4411468910")
-        addAdMobBannerView(unitId: "ca-app-pub-3940256099942544/2934735716", edge: .bottom)
+        loadAdMobInterstitial(unitId: ServiceKeys.INTERSTITIAL)
+        addAdMobBannerView(unitId: ServiceKeys.BANNER_PHONE, edge: .bottom)
     }
     
     // MARK: - Action
