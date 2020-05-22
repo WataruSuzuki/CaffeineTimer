@@ -120,12 +120,20 @@ class MyTopViewController: HelpingMonetizeViewController,
         }
         
         labelTimeLeft.isHidden = true
-        caffeineGaugeView.valueTextColor = UIColor.black
+        caffeineGaugeView.valueTextColor = valueTextColor()
         segmentedControlForGauge.setTitle(GaugeTimeHelper.GaugeDispType.caffeine.getGaugeDispTypeTitle(), forSegmentAt: GaugeTimeHelper.GaugeDispType.caffeine.rawValue)
         segmentedControlForGauge.setTitle(GaugeTimeHelper.GaugeDispType.time.getGaugeDispTypeTitle(), forSegmentAt: GaugeTimeHelper.GaugeDispType.time.rawValue)
         self.caffeineGaugeView.unitOfMeasurement = GaugeTimeHelper.GaugeDispType.time.getGaugeDispTypeUnit()
         
         updateGaugeDispType()
+    }
+    
+    private func valueTextColor() -> UIColor {
+        if #available(iOS 13.0, *) {
+            return .label
+        } else {
+            return .black
+        }
     }
     
     private func updateGaugeDispType() {
@@ -139,7 +147,7 @@ class MyTopViewController: HelpingMonetizeViewController,
             caffeineGaugeView.valueTextColor = caffeineGaugeView.backgroundColor
         } else {
             labelTimeLeft.isHidden = true
-            caffeineGaugeView.valueTextColor = UIColor.black
+            caffeineGaugeView.valueTextColor = valueTextColor()
         }
         let selectedType = GaugeTimeHelper.GaugeDispType(rawValue: segmentedControlForGauge.selectedSegmentIndex)
         self.caffeineGaugeView.unitOfMeasurement = selectedType!.getGaugeDispTypeUnit()
@@ -167,7 +175,7 @@ class MyTopViewController: HelpingMonetizeViewController,
         // Calculate velocity
         helper.velocity += Float(CaffeineValue.CAFFEINE_PER_DRINK) / 60
         self.labelTimeLeft.isHidden = true
-        caffeineGaugeView.valueTextColor = UIColor.black
+        caffeineGaugeView.valueTextColor = valueTextColor()
         self.caffeineGaugeView.unitOfMeasurement = GaugeTimeHelper.GaugeDispType.caffeine.getGaugeDispTypeUnit()
         
         if helper.isFueledToNextValue() {
